@@ -2,59 +2,81 @@ import type { IPersonConfig } from '@/types/storeType'
 import { rgba } from '@/utils/color'
 
 export function useElementStyle(element: any, person: IPersonConfig, index: number, patternList: number[], patternColor: string, cardColor: string, cardSize: { width: number, height: number }, textSize: number, mod: 'default' | 'lucky' | 'sphere' = 'default', type: 'add' | 'change' = 'add') {
-  if (patternList.includes(index + 1) && mod === 'default') {
-    element.style.backgroundColor = rgba(patternColor, Math.random() * 0.2 + 0.8)
-  }
-  else if (mod === 'sphere' || mod === 'default') {
-    element.style.backgroundColor = rgba(cardColor, Math.random() * 0.5 + 0.25)
-  }
-  else if (mod === 'lucky') {
-    element.style.backgroundColor = rgba(cardColor, 0.8)
-  }
-  element.style.border = `1px solid ${rgba(cardColor, 0.25)}`
-  element.style.boxShadow = `0 0 12px ${rgba(cardColor, 0.5)}`
+  // 设置基础尺寸
   element.style.width = `${cardSize.width}px`
   element.style.height = `${cardSize.height}px`
+  element.style.borderRadius = mod === 'lucky' ? '16px' : '12px'
+  
   if (mod === 'lucky') {
+    // 中奖卡片 - 简化阴影
     element.className = 'lucky-element-card'
+    element.style.backgroundColor = rgba(cardColor, 0.85)
+    element.style.border = `2px solid rgba(255, 215, 0, 0.6)`
+    element.style.boxShadow = `0 8px 32px rgba(255, 215, 0, 0.4)`
   }
   else {
+    // 普通卡片 - 简化阴影
     element.className = 'element-card'
+    
+    if (patternList.includes(index + 1) && mod === 'default') {
+      element.style.backgroundColor = rgba(patternColor, Math.random() * 0.2 + 0.8)
+    }
+    else {
+      element.style.backgroundColor = rgba(cardColor, Math.random() * 0.4 + 0.2)
+    }
+    
+    element.style.border = `1px solid ${rgba(cardColor, 0.35)}`
+    element.style.boxShadow = `0 4px 16px ${rgba(cardColor, 0.3)}`
   }
+  
+  // 悬停效果 - 简化
   if (type === 'add') {
     element.addEventListener('mouseenter', (ev: MouseEvent) => {
       const target = ev.target as HTMLElement
-      target.style.border = `1px solid ${rgba(cardColor, 0.75)}`
-      target.style.boxShadow = `0 0 12px ${rgba(cardColor, 0.75)}`
+      if (mod === 'lucky') {
+        target.style.boxShadow = `0 12px 40px rgba(255, 215, 0, 0.5)`
+      }
+      else {
+        target.style.border = `1px solid ${rgba(cardColor, 0.6)}`
+        target.style.boxShadow = `0 8px 24px ${rgba(cardColor, 0.4)}`
+      }
     })
     element.addEventListener('mouseleave', (ev: MouseEvent) => {
       const target = ev.target as HTMLElement
-      target.style.border = `1px solid ${rgba(cardColor, 0.25)}`
-      target.style.boxShadow = `0 0 12px ${rgba(cardColor, 0.5)}`
+      if (mod === 'lucky') {
+        target.style.boxShadow = `0 8px 32px rgba(255, 215, 0, 0.4)`
+      }
+      else {
+        target.style.border = `1px solid ${rgba(cardColor, 0.35)}`
+        target.style.boxShadow = `0 4px 16px ${rgba(cardColor, 0.3)}`
+      }
     })
   }
+  
+  // 卡片ID样式
   element.children[0].style.fontSize = `${textSize * 0.5}px`
   if (person.uid) {
     element.children[0].textContent = person.uid
   }
 
+  // 卡片名称样式
   element.children[1].style.fontSize = `${textSize}px`
   element.children[1].style.lineHeight = `${textSize * 3}px`
-  element.children[1].style.textShadow = `0 0 12px ${rgba(cardColor, 0.95)}`
+  element.children[1].style.textShadow = `0 1px 4px ${rgba(cardColor, 0.6)}`
   if (person.name) {
     element.children[1].textContent = person.name
   }
+  
+  // 卡片详情样式
   element.children[2].style.fontSize = `${textSize * 0.5}px`
   if (person.department || person.identity) {
     element.children[2].innerHTML = `${person.department ? person.department : ''}<br/>${person.identity ? person.identity : ''}`
   }
-
-    element.children[2].style.fontSize = textSize * 0.5 + 'px'
-    if (person.department || person.identity) {
-        element.children[2].innerHTML = `${person.department ? person.department : ''}<br/>${person.identity ? person.identity : ''}`
-    }
-    element.children[3].src = person.avatar
-    return element
+  
+  // 头像
+  element.children[3].src = person.avatar
+  
+  return element
 }
 
 /**

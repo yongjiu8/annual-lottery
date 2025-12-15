@@ -199,6 +199,7 @@ export default {
     exitTheme: '退出主题',
     shareLink: '复制分享链接',
     linkCopied: '链接已复制，分享给其他人加入抽奖吧！',
+    scanToJoin: '扫码参与抽奖',
     backToThemes: '返回主题列表',
     themePassword: '密码',
     themePasswordPlaceholder: '设置密码保护此主题',

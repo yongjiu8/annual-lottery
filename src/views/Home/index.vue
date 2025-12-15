@@ -20,7 +20,12 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'vue-toast-notification'
 import PrizeList from './PrizeList.vue'
 import JoinLottery from '@/components/JoinLottery/index.vue'
+import QRCode from 'qrcode'
 import 'vue-toast-notification/dist/theme-sugar.css'
+
+// 二维码弹窗
+const showQrModal = ref(false)
+const qrCodeDataUrl = ref('')
 
 // 检测是否为移动端
 const isMobile = computed(() => {
@@ -36,8 +41,8 @@ const globalConfig = useStore().globalConfig
 const prizeConfig = useStore().prizeConfig
 const themeStore = useStore().themeStore
 
-// 复制分享链接
-function copyShareLink() {
+// 复制分享链接并显示二维码
+async function copyShareLink() {
   const themeId = themeStore.currentThemeId
   if (!themeId) {
     console.warn('[copyShareLink] No theme ID')
@@ -47,6 +52,18 @@ function copyShareLink() {
   const baseUrl = window.location.origin
   const shareUrl = `${baseUrl}/t/${themeId}`
   
+  // 生成二维码
+  try {
+    qrCodeDataUrl.value = await QRCode.toDataURL(shareUrl, {
+      width: 200,
+      margin: 2,
+      color: { dark: '#1a1a2e', light: '#ffffff' }
+    })
+    showQrModal.value = true
+  } catch (err) {
+    console.error('[QRCode] Generate failed:', err)
+  }
+  
   // 降级方案：创建临时输入框（兼容非 HTTPS 环境）
   const fallbackCopy = () => {
     const input = document.createElement('input')
@@ -55,7 +72,7 @@ function copyShareLink() {
     input.style.left = '-9999px'
     document.body.appendChild(input)
     input.select()
-    input.setSelectionRange(0, 99999) // 移动端兼容
+    input.setSelectionRange(0, 99999)
     try {
       document.execCommand('copy')
       toast.open({
@@ -66,17 +83,11 @@ function copyShareLink() {
       })
     } catch (e) {
       console.error('[copyShareLink] execCommand failed:', e)
-      toast.open({
-        message: shareUrl,
-        type: 'info',
-        position: 'top-right',
-        duration: 5000,
-      })
     }
     document.body.removeChild(input)
   }
   
-  // 优先使用 clipboard API（仅 HTTPS 可用）
+  // 优先使用 clipboard API
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard.writeText(shareUrl).then(() => {
       toast.open({
@@ -91,6 +102,11 @@ function copyShareLink() {
   } else {
     fallbackCopy()
   }
+}
+
+// 关闭二维码弹窗
+function closeQrModal() {
+  showQrModal.value = false
 }
 
 const { getAllPersonList: allPersonList, getNotPersonList: notPersonList, getNotThisPrizePersonList: notThisPrizePersonList,
@@ -975,6 +991,20 @@ onUnmounted(() => {
       <span class="share-text">{{ t('entry.shareLink') }}</span>
     </button>
   </div>
+  
+  <!-- 二维码弹窗 -->
+  <Teleport to="body">
+    <div v-if="showQrModal" class="qr-modal-overlay" @click="closeQrModal">
+      <div class="qr-modal" @click.stop>
+        <button class="qr-close-btn" @click="closeQrModal">✕</button>
+        <h3 class="qr-title">{{ t('entry.scanToJoin') }}</h3>
+        <div class="qr-code-wrapper">
+          <img :src="qrCodeDataUrl" alt="QR Code" class="qr-code-img" />
+        </div>
+        <p class="qr-hint">{{ t('entry.linkCopied') }}</p>
+      </div>
+    </div>
+  </Teleport>
   </div>
 </template>
 
@@ -1463,5 +1493,92 @@ onUnmounted(() => {
         transform: translateZ(0);
         opacity: 1;
     }
+}
+
+// ==================== 二维码弹窗 ====================
+.qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+.qr-modal {
+  position: relative;
+  background: linear-gradient(145deg, #1e1e3f, #2a2a5a);
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: scaleIn 0.3s ease;
+}
+
+.qr-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+  }
+}
+
+.qr-title {
+  margin: 0 0 20px;
+  font-size: 20px;
+  font-weight: 600;
+  color: white;
+  letter-spacing: 1px;
+}
+
+.qr-code-wrapper {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+.qr-code-img {
+  display: block;
+  width: 200px;
+  height: 200px;
+}
+
+.qr-hint {
+  margin: 16px 0 0;
+  color: #10b981;
+  font-size: 14px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to { 
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>

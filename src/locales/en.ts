@@ -199,6 +199,7 @@ export default {
     exitTheme: 'Exit Theme',
     shareLink: 'Copy Share Link',
     linkCopied: 'Link copied! Share it with others to join the lottery!',
+    scanToJoin: 'Scan to Join Lottery',
     backToThemes: 'Back to Themes',
     themePassword: 'Password',
     themePasswordPlaceholder: 'Set a password to protect this theme',

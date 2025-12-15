@@ -1,110 +1,134 @@
+// ==================== 普通卡片样式 ====================
 .element-card {
     cursor: default;
     text-align: center;
     user-select: none;
+    position: relative;
+    border-radius: 12px;
+    // 使用 will-change 优化 GPU 渲染
+    will-change: transform;
+    // 开启硬件加速
+    transform: translateZ(0);
+    backface-visibility: hidden;
+
     .card-id {
         position: absolute;
         top: 10px;
-        right: 20px;
+        right: 16px;
         z-index: 2;
+        font-weight: 500;
+        opacity: 0.8;
     }
 
     .card-name {
         position: absolute;
         top: 40px;
-        left: 0px;
-        right: 0;
-        font-weight: bold;
+        left: 10px;
+        right: 10px;
+        font-weight: 700;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         z-index: 2;
+        letter-spacing: 1px;
     }
 
-    .card-avatar-name{
+    .card-avatar-name {
         top: auto;
         bottom: 0;
-        left: 0px;
+        left: 0;
         right: 0;
         line-height: 2 !important;
     }
 
     .card-detail {
         position: absolute;
-        left: 0;
-        right: 0;
-        bottom: 15px;
+        left: 10px;
+        right: 10px;
+        bottom: 12px;
         z-index: 2;
+        opacity: 0.85;
     }
 
-    .card-avatar{
+    .card-avatar {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: 1;
-        width: 140px !important;
-        height: 120px !important;
+        width: 100% !important;
+        height: 100% !important;
         object-fit: cover;
+        border-radius: 12px;
     }
 }
 
+// ==================== 中奖卡片样式 ====================
 .lucky-element-card {
     cursor: default;
-    &::before {
-        background-color: linear-gradient(-45deg, #e81cff 0%, #40c9ff 100%);
-        border: 1px solid linear-gradient(-45deg, #e81cff 0%, #40c9ff 100%);
-    }
+    text-align: center;
+    user-select: none;
+    position: relative;
+    border-radius: 16px;
+    // 使用 will-change 优化 GPU 渲染
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
 
     .card-id {
         position: absolute;
-        top: 20px;
+        top: 16px;
         right: 20px;
-        z-index: 2;
+        z-index: 10;
+        font-weight: 600;
+        color: #ffd700;
     }
 
     .card-name {
         text-align: center;
-        z-index: 2;
+        z-index: 10;
         position: absolute;
-        top: 40px;
-        left: 0px;
-        right: 0;
-        font-weight: bold;
+        top: 50px;
+        left: 16px;
+        right: 16px;
+        font-weight: 800;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        // -webkit-animation: tracking-in-expand-fwd 0.8s cubic-bezier(0.215, 0.61, 0.355, 1) both;
-        // animation: tracking-in-expand-fwd 0.8s cubic-bezier(0.215, 0.61, 0.355, 1) both;
-        // animation-delay: 0.6s;
+        letter-spacing: 2px;
+        color: #ffd700;
+        text-shadow: 0 2px 8px rgba(255, 215, 0, 0.6);
     }
-    .card-avatar-name{
+    
+    .card-avatar-name {
         top: auto;
         bottom: 0;
-        left: 0px;
+        left: 0;
         right: 0;
-        line-height: 2 !important;
+        line-height: 2.5 !important;
     }
 
     .card-detail {
         position: absolute;
-        left: 0;
-        right: 0;
+        left: 16px;
+        right: 16px;
         text-align: center;
-        z-index: 2;
-        bottom: 15px;
+        z-index: 10;
+        bottom: 20px;
+        color: rgba(255, 255, 255, 0.9);
     }
 
-    .card-avatar{
+    .card-avatar {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
         z-index: 1;
-        width: 280px !important;
-        height: 240px !important;
+        width: 100% !important;
+        height: 100% !important;
         object-fit: cover;
+        border-radius: 16px;
     }
 }

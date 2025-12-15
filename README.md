@@ -1,39 +1,29 @@
 <div align="center">
-    <a href="https://log1997.github.io/log-lottery/">
+    <a href="http://lottery.teixing.com">
         <img src="./static/images/lottery.png" width="100" height="100" />
     </a>
 
-# log-lottery 🚀🚀🚀🚀
+# annual-lottery 🚀🚀🚀🚀
 
-[![MIT](https://img.shields.io/github/package-json/v/log1997/log-lottery)](https://github.com/LOG1997/log-lottery)
-[![MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/LOG1997/log-lottery)
-[![github](https://img.shields.io/badge/Author-log1997-blue.svg)](https://github.com/log1997)
-[![vue3](https://img.shields.io/badge/VUE-3-green.svg)](https://github.com/log1997)
-[![build](https://img.shields.io/github/actions/workflow/status/log1997/log-lottery/node.js.yml)](https://github.com/log1997)
+[![MIT](https://img.shields.io/github/package-json/v/yongjiu8/annual-lottery)](https://github.com/yongjiu8/annual-lottery)
+[![MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/yongjiu8/annual-lottery)
+[![github](https://img.shields.io/badge/Author-yongjiu8-blue.svg)](https://github.com/yongjiu8)
+[![vue3](https://img.shields.io/badge/VUE-3-green.svg)](https://github.com/yongjiu8/annual-lottery)
+[![build](https://img.shields.io/github/actions/workflow/status/yongjiu8/annual-lottery/node.js.yml)](https://github.com/yongjiu8/annual-lottery)
 
 </div>
 
-log-lottery是一个可配置可定制化的抽奖应用，炫酷3D球体，可用于年会抽奖等活动，支持奖品、人员、界面、图片音乐配置。
+annual-lottery是一个多租户，可微信扫码加入抽奖，可配置可定制化的抽奖应用，炫酷3D球体，可用于年会抽奖等活动，支持奖品、人员、界面、图片音乐配置。
 
 > 如果进入网站遇到图片无法显示或有报错的情况，请先到【全局配置】-【界面配置】菜单中点击【重置所有数据】按钮清除数据后进行更新。
 
-> 该项目将在近期进行**内部代码重构**及**开发新功能**，预计元旦节前三天上线新版本。
-
 ## 要求
 
-使用PC端最新版Chrome或Edge浏览器。
+使用PC端最新版Chrome或Edge浏览器显示抽奖大屏。手机扫码加入抽奖。
 
 最新版体验地址：
 
 [http://lottery.teixing.com](http://lottery.teixing.com)
-
-访问地址：
-
-<https://to2026.xyz/log-lottery>
-
-or
-
-<https://log1997.github.io/log-lottery/>
 
 ## TODO
 
@@ -52,10 +42,8 @@ or
 - [x] 🈶 增加主题功能，每个主题隔离数据，类似多租户
 - [x] 📱  手机打开抽奖页面加入抽奖增加设备指纹 一个设备只能加入一次
 - [x] 🐰 增加主题密码验证防止被其他用户删除
-- [x] 😘 弹幕（开发中）
-- [ ] 🧵 卡片组成多种形状
-...
-需要更多功能或发现bug请留言[issues](https://github.com/LOG1997/log-lottery/issues)
+
+... 需要更多功能或发现bug请留言[issues](https://github.com/yongjiu8/annual-lottery/issues)
 
 ## 详细介绍
 
@@ -128,7 +116,7 @@ or
 ```bash
 pnpm i
 or
-npm install
+npm install --force
 ```
 
 开发运行
@@ -150,12 +138,12 @@ npm run build
 若想直接以打开html文件的方式运行，请执行以下命令进行打包。打包完成后在dist目录中直接打开index.html即可。
 
 ```bash
-pnpm build:file
+pnpm build
 or
-npm run build:file
+npm run build
 ```
 
-> 项目思路来源于 <https://github.com/moshang-xc/lottery>
+> 项目基础功能来源于 <https://github.com/LOG1997/log-lottery>
 
 # 抽奖系统后端服务
 
@@ -165,7 +153,7 @@ npm run build:file
 
 ```bash
 cd server
-npm install
+npm install --force
 ```
 
 ## 启动服务
@@ -212,7 +200,7 @@ npm run dev
 3. 如需外网访问，请配置相应的端口转发或使用 ngrok 等工具
 
 
-## Docker支持
+## Docker支持 --待构建基础镜像
 
 构建镜像
 
@@ -230,7 +218,7 @@ docker run -d -p 9279:80 log-lottery
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=LOG1997/log-lottery&type=Date)](https://star-history.com/#LOG1997/log-lottery&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=yongjiu8/annual-lottery&type=Date)](https://star-history.com/#yongjiu8/annual-lottery&Date)
 
 ## License
 
