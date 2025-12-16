@@ -13,7 +13,7 @@
 
 </div>
 
-annual-lottery是一个多租户，可微信扫码加入抽奖，可配置可定制化的抽奖应用，炫酷3D球体，可用于年会抽奖等活动，支持奖品、人员、界面、图片音乐配置。
+annual-lottery是一个多租户，语言支持中英，可微信扫码加入抽奖，可配置可定制化的抽奖应用，炫酷3D球体，可用于年会抽奖等活动，支持奖品、人员、界面、图片音乐配置。
 
 > 如果进入网站遇到图片无法显示或有报错的情况，请先到【全局配置】-【界面配置】菜单中点击【重置所有数据】按钮清除数据后进行更新。
 
@@ -200,21 +200,26 @@ npm run dev
 3. 如需外网访问，请配置相应的端口转发或使用 ngrok 等工具
 
 
-## Docker支持 --待构建基础镜像
+## Docker支持
 
 构建镜像
 
 ```bash
-docker build -t log-lottery .
+docker build -t annual-lottery .
 ```
 
 运行容器
 
 ```bash
-docker run -d -p 9279:80 log-lottery
+docker run -d --name annual-lottery -p 9277:80 annual-lottery
 ```
 
-容器运行成功后即可在本地通过<http://localhost:9279/log-lottery/>访问
+不想构建镜像的直接运行我们构建好的镜像
+```bash
+docker run -d --name annual-lottery -p 9277:80 yongjiu/lottery
+```
+
+容器运行成功后即可在本地通过<http://localhost:9277>访问
 
 ## Star History
 

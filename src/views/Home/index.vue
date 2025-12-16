@@ -461,9 +461,36 @@ async function enterLottery() {
     }
   }
   canOperate.value = false
-  await transform(targets.sphere, 1000)
+  await transform(targets.sphere, 600)
   currentStatus.value = 1
-  rollBall(0.1, 2000)
+  rollBall(0.1, 1000)
+}
+
+// 返回初始状态
+async function backToInitial() {
+  if (!canOperate.value) {
+    return
+  }
+  canOperate.value = false
+  TWEEN.removeAll()
+  if (intervalTimer.value) {
+    clearInterval(intervalTimer.value)
+    intervalTimer.value = null
+  }
+  
+  // 重置场景旋转
+  scene.value.rotation.x = 0
+  scene.value.rotation.y = 0
+  scene.value.rotation.z = 0
+  
+  // 重置相机位置
+  camera.value.position.set(0, 0, cameraZ.value)
+  camera.value.rotation.set(0, 0, 0)
+  controls.value.reset()
+  
+  await transform(targets.table, 600)
+  currentStatus.value = 0
+  canOperate.value = true
 }
 // 开始抽奖
 function startLottery() {
@@ -658,8 +685,8 @@ function centerFire(particleRatio: number, opts: any) {
   })
 }
 
-function setDefaultPersonList() {
-  personConfig.setDefaultPersonList()
+async function setDefaultPersonList() {
+  await personConfig.setDefaultPersonList()
   // 刷新页面
   window.location.reload()
 }
@@ -699,9 +726,18 @@ function listenKeyboard(e: KeyboardEvent) {
   if ((e.keyCode !== 32 && e.keyCode !== 27) && !canOperate.value) {
     return
   }
-  if (e.keyCode === 27 && currentStatus.value === 3) {
-    quitLottery()
+  
+  // ESC 键处理
+  if (e.keyCode === 27) {
+    if (currentStatus.value === 1) {
+      backToInitial()
+    } else if (currentStatus.value === 3) {
+      quitLottery()
+    }
+    return
   }
+  
+  // 空格键处理
   if (e.keyCode !== 32) {
     return
   }
@@ -910,7 +946,7 @@ onUnmounted(() => {
     
     <!-- 空数据提示 -->
     <div v-if="tableData.length <= 0" class="empty-actions">
-      <button class="action-btn primary" @click="router.push('config')">
+      <button class="action-btn primary" @click="router.push('/config')">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
         </svg>

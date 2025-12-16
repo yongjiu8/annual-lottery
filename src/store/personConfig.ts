@@ -203,11 +203,11 @@ export const usePersonConfig = defineStore('person', {
       })
       this.personConfig.alreadyPersonList = []
     },
-    setDefaultPersonList() {
+    async setDefaultPersonList() {
       this.personConfig.allPersonList = defaultPersonList
       this.personConfig.alreadyPersonList = []
       saveToLocalStorage(this.personConfig)
-      saveToServer(this.personConfig)
+      await saveToServer(this.personConfig)
     },
     // 重置所有配置
     reset() {
