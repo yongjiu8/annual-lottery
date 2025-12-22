@@ -9,6 +9,7 @@
   "dependencies": {
     "better-sqlite3": "^11.6.0",
     "cors": "^2.8.5",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "multer": "^2.0.2"
   }
 }

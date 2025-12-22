@@ -924,9 +924,14 @@ onUnmounted(() => {
   <MobileJoinLottery v-if="isMobile" />
   
   <!-- PC端显示完整抽奖页面 -->
-  <div v-else class="home-page">
-    <!-- 背景动画 -->
-    <div class="bg-animation">
+  <div v-else class="home-page" :class="{ 'has-bg-image': (homeBackground as any)?.url }">
+    <!-- 自定义背景图片 -->
+    <div v-if="(homeBackground as any)?.url" class="custom-bg-image">
+      <img :src="(homeBackground as any)?.url" alt="background" />
+    </div>
+    
+    <!-- 背景动画 - 只在没有背景图片时显示 -->
+    <div class="bg-animation" v-if="!(homeBackground as any)?.url">
       <div class="stars"></div>
       <div class="stars2"></div>
       <div class="stars3"></div>
@@ -1052,6 +1057,27 @@ onUnmounted(() => {
   height: 100vh;
   overflow: hidden;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  
+  &.has-bg-image {
+    background: transparent;
+  }
+}
+
+// 自定义背景图片
+.custom-bg-image {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.7;
+  }
 }
 
 // 背景星星动画

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useThemeStore, type ITheme } from '@/store/theme'
@@ -28,6 +28,11 @@ const deletePassword = ref('')
 const enterPassword = ref('')
 const isAnimating = ref(false)
 
+// 搜索和分页
+const searchKeyword = ref('')
+const currentPage = ref(1)
+const pageSize = ref(6)
+
 // 表单数据
 const formData = ref({
   name: '',
@@ -36,7 +41,44 @@ const formData = ref({
 })
 
 // 获取所有主题
-const themes = computed(() => themeStore.getAllThemes)
+const allThemes = computed(() => themeStore.getAllThemes)
+
+// 过滤后的主题列表
+const filteredThemes = computed(() => {
+  if (!searchKeyword.value.trim()) {
+    return allThemes.value
+  }
+  const keyword = searchKeyword.value.toLowerCase().trim()
+  return allThemes.value.filter(theme => 
+    theme.name.toLowerCase().includes(keyword) ||
+    (theme.description && theme.description.toLowerCase().includes(keyword))
+  )
+})
+
+// 总页数
+const totalPages = computed(() => Math.ceil(filteredThemes.value.length / pageSize.value))
+
+// 当前页的主题
+const themes = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return filteredThemes.value.slice(start, end)
+})
+
+// 搜索时重置到第一页
+watch(searchKeyword, () => {
+  currentPage.value = 1
+})
+
+// 分页方法
+const goToPage = (page: number) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const prevPage = () => goToPage(currentPage.value - 1)
+const nextPage = () => goToPage(currentPage.value + 1)
 
 // 表单验证
 const isFormValid = computed(() => 
@@ -200,7 +242,15 @@ const formatDate = (dateStr: string) => {
 }
 
 onMounted(() => {
-  // 如果已经选择了主题，可以选择直接进入
+  // 允许页面滚动
+  document.body.style.overflowY = 'auto'
+  document.documentElement.style.overflowY = 'auto'
+})
+
+// 离开页面时恢复
+onUnmounted(() => {
+  document.body.style.overflowY = 'hidden'
+  document.documentElement.style.overflowY = 'hidden'
 })
 </script>
 
@@ -224,13 +274,30 @@ onMounted(() => {
       <div class="themes-section">
         <div class="section-header">
           <h2>{{ t('entry.myThemes') }}</h2>
-          <button class="create-btn" @click="openCreateModal">
-            <span class="icon">+</span>
-            {{ t('entry.createTheme') }}
-          </button>
+          <div class="header-actions">
+            <!-- 搜索框 -->
+            <div class="search-box" v-if="allThemes.length > 0">
+              <span class="search-icon">🔍</span>
+              <input
+                v-model="searchKeyword"
+                type="text"
+                :placeholder="t('entry.searchPlaceholder')"
+                class="search-input"
+              />
+              <button 
+                v-if="searchKeyword" 
+                class="clear-search" 
+                @click="searchKeyword = ''"
+              >×</button>
+            </div>
+            <button class="create-btn" @click="openCreateModal">
+              <span class="icon">+</span>
+              {{ t('entry.createTheme') }}
+            </button>
+          </div>
         </div>
 
-        <div v-if="themes.length === 0" class="empty-state">
+        <div v-if="allThemes.length === 0" class="empty-state">
           <div class="empty-icon">📦</div>
           <p>{{ t('entry.noThemes') }}</p>
           <button class="create-first-btn" @click="openCreateModal">
@@ -238,35 +305,82 @@ onMounted(() => {
           </button>
         </div>
 
-        <div v-else class="themes-grid">
-          <div
-            v-for="theme in themes"
-            :key="theme.id"
-            class="theme-card"
-            @click="enterTheme(theme)"
-          >
-            <div class="card-header">
-              <div class="theme-icon">🎯</div>
-              <button 
-                class="delete-btn" 
-                @click="confirmDelete(theme, $event)"
-                :title="t('button.delete')"
+        <template v-else>
+          <!-- 搜索结果为空 -->
+          <div v-if="filteredThemes.length === 0" class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <p>{{ t('entry.noSearchResults') }}</p>
+          </div>
+
+          <template v-else>
+            <!-- 主题统计 -->
+            <div class="themes-stats">
+              <span>{{ t('entry.totalThemes', { count: filteredThemes.length }) }}</span>
+              <span v-if="searchKeyword">· {{ t('entry.searchResults') }}</span>
+            </div>
+
+            <div class="themes-grid">
+              <div
+                v-for="theme in themes"
+                :key="theme.id"
+                class="theme-card"
+                @click="enterTheme(theme)"
               >
-                ×
+                <div class="card-header">
+                  <div class="theme-icon">🎯</div>
+                  <button 
+                    class="delete-btn" 
+                    @click="confirmDelete(theme, $event)"
+                    :title="t('button.delete')"
+                  >
+                    ×
+                  </button>
+                </div>
+                <h3 class="theme-name">{{ theme.name }}</h3>
+                <p class="theme-desc">{{ theme.description || t('entry.noDescription') }}</p>
+                <div class="theme-meta">
+                  <span class="meta-item">
+                    📅 {{ formatDate(theme.createdAt) }}
+                  </span>
+                </div>
+                <div class="enter-hint">
+                  {{ t('entry.clickToEnter') }} →
+                </div>
+              </div>
+            </div>
+
+            <!-- 分页 -->
+            <div v-if="totalPages > 1" class="pagination">
+              <button 
+                class="page-btn" 
+                :disabled="currentPage === 1"
+                @click="prevPage"
+              >
+                ‹ {{ t('entry.prevPage') }}
+              </button>
+              
+              <div class="page-numbers">
+                <button
+                  v-for="page in totalPages"
+                  :key="page"
+                  class="page-num"
+                  :class="{ active: page === currentPage }"
+                  @click="goToPage(page)"
+                >
+                  {{ page }}
+                </button>
+              </div>
+              
+              <button 
+                class="page-btn" 
+                :disabled="currentPage === totalPages"
+                @click="nextPage"
+              >
+                {{ t('entry.nextPage') }} ›
               </button>
             </div>
-            <h3 class="theme-name">{{ theme.name }}</h3>
-            <p class="theme-desc">{{ theme.description || t('entry.noDescription') }}</p>
-            <div class="theme-meta">
-              <span class="meta-item">
-                📅 {{ formatDate(theme.createdAt) }}
-              </span>
-            </div>
-            <div class="enter-hint">
-              {{ t('entry.clickToEnter') }} →
-            </div>
-          </div>
-        </div>
+          </template>
+        </template>
       </div>
     </div>
 
@@ -433,7 +547,8 @@ onMounted(() => {
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 // 背景星星动画
@@ -491,7 +606,7 @@ onMounted(() => {
   z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 60px 24px;
+  padding: 60px 24px 80px;
 }
 
 .header {
@@ -536,13 +651,84 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
   
   h2 {
     color: #fff;
     font-size: 24px;
     margin: 0;
   }
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    font-size: 14px;
+    pointer-events: none;
+  }
+  
+  .search-input {
+    width: 220px;
+    padding: 10px 36px 10px 36px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    transition: all 0.3s;
+    
+    &::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+    
+    &:focus {
+      outline: none;
+      border-color: #667eea;
+      background: rgba(102, 126, 234, 0.1);
+      width: 260px;
+    }
+  }
+  
+  .clear-search {
+    position: absolute;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    
+    &:hover {
+      background: rgba(255, 107, 107, 0.6);
+    }
+  }
+}
+
+.themes-stats {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  margin-bottom: 20px;
 }
 
 .create-btn {
@@ -606,6 +792,66 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 24px;
+}
+
+// 分页样式
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.page-btn {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  
+  &:hover:not(:disabled) {
+    background: rgba(102, 126, 234, 0.2);
+    border-color: #667eea;
+  }
+  
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.page-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.page-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  
+  &:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  &.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: transparent;
+    color: white;
+    font-weight: 600;
+  }
 }
 
 .theme-card {

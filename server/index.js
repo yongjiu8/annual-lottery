@@ -1,12 +1,52 @@
 import express from 'express'
 import cors from 'cors'
 import db from './db.js'
+import multer from 'multer'
+import path from 'path'
+import fs from 'fs'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = 3456
 
+// 确保上传目录存在
+const uploadDir = path.join(__dirname, 'uploads')
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true })
+}
+
+// 配置 multer 存储
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir)
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    const ext = path.extname(file.originalname)
+    cb(null, uniqueSuffix + ext)
+  }
+})
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Only image files are allowed'))
+    }
+  }
+})
+
 app.use(cors())
 app.use(express.json({ limit: '50mb' }))
+
+// 静态文件服务 - 提供上传的图片访问
+app.use('/uploads', express.static(uploadDir))
 
 // ==================== 主题 API ====================
 
@@ -300,6 +340,43 @@ app.delete('/api/themes/:themeId/fingerprint/by-name/:personName', (req, res) =>
     db.prepare(
       'DELETE FROM fingerprints WHERE theme_id = ? AND person_name = ?'
     ).run(themeId, decodeURIComponent(personName))
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// ==================== 图片上传 API ====================
+
+// 上传图片
+app.post('/api/upload/image', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' })
+    }
+    
+    const fileUrl = `/uploads/${req.file.filename}`
+    res.json({
+      success: true,
+      data: {
+        id: req.file.filename,
+        name: req.file.originalname,
+        url: fileUrl,
+        size: req.file.size
+      }
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// 删除图片
+app.delete('/api/upload/image/:filename', (req, res) => {
+  try {
+    const filePath = path.join(uploadDir, req.params.filename)
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+    }
     res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })

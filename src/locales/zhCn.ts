@@ -210,5 +210,11 @@ export default {
     enterPasswordHint: '请输入密码以进入 "{name}"',
     wrongPassword: '密码错误',
     enter: '进入',
+    searchPlaceholder: '搜索主题...',
+    noSearchResults: '未找到匹配的主题',
+    totalThemes: '共 {count} 个主题',
+    searchResults: '搜索结果',
+    prevPage: '上一页',
+    nextPage: '下一页',
   },
 }

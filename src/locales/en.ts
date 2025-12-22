@@ -210,5 +210,11 @@ export default {
     enterPasswordHint: 'Please enter the password to enter "{name}"',
     wrongPassword: 'Wrong password',
     enter: 'Enter',
+    searchPlaceholder: 'Search themes...',
+    noSearchResults: 'No themes found',
+    totalThemes: '{count} themes',
+    searchResults: 'Search results',
+    prevPage: 'Prev',
+    nextPage: 'Next',
   },
 }

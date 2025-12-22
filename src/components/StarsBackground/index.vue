@@ -1,8 +1,8 @@
 <script setup lang='ts'>
 import Sparticles from 'sparticles';
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useElementSize } from '@vueuse/core';
-import localforage from 'localforage'
+
 const props = defineProps({
     homeBackground: {
         type: Object,
@@ -13,9 +13,7 @@ const props = defineProps({
         })
     }
 })
-const imageDbStore = localforage.createInstance({
-    name: 'imgStore'
-})
+
 const imgUrl = ref('')
 const starRef = ref();
 
@@ -33,23 +31,16 @@ const listenWindowSize = () => {
     });
 }
 
-const getImageStoreItem = async (item: any): Promise<string> => {
-    let image = ''
-    if (item.url == 'Storage') {
-        const key = item.id;
-        image = await imageDbStore.getItem(key) as string
+// 监听背景图片变化
+watch(() => props.homeBackground, (newVal) => {
+    if (newVal && newVal.url) {
+        imgUrl.value = newVal.url
+    } else {
+        imgUrl.value = ''
     }
-    else {
-        image = item.url
-    }
+}, { deep: true, immediate: true })
 
-
-    return image
-}
 onMounted(() => {
-    getImageStoreItem(props.homeBackground).then((image) => {
-        imgUrl.value = image
-    })
     addSparticles(starRef.value, width.value, height.value);
     listenWindowSize()
 })
@@ -71,12 +62,22 @@ onUnmounted(() => {
         </div>
         
         <!-- 自定义背景图片 -->
-        <div class="home-background" v-if="homeBackground.url">
-            <img :src="imgUrl" class="w-full h-full object-cover" alt="">
+        <div class="home-background" v-if="imgUrl">
+            <img 
+                :src="imgUrl" 
+                alt="background"
+                :style="{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    opacity: '0.8',
+                    display: 'block'
+                }"
+            >
         </div>
         
         <!-- Sparticles 粒子效果 -->
-        <div v-if="!homeBackground.url" class="sparticles-layer" ref="starRef"></div>
+        <div v-if="!imgUrl" class="sparticles-layer" ref="starRef"></div>
     </div>
 </template>
 
@@ -163,10 +164,10 @@ onUnmounted(() => {
     z-index: 2;
     
     img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        opacity: 0.6;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+        opacity: 0.8 !important;
     }
 }
 
