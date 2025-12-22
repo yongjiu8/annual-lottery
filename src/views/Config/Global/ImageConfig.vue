@@ -14,7 +14,7 @@ const imgUploadToast = ref(0) // 0是不显示，1是成功，2是失败,3是不
 const isUploading = ref(false)
 
 // 服务器地址
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3456'
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3456/api'
 
 async function handleFileChange(e: Event) {
   const file = ((e.target as HTMLInputElement).files as FileList)[0]
@@ -32,7 +32,7 @@ async function handleFileChange(e: Event) {
     const formData = new FormData()
     formData.append('image', file)
 
-    const response = await fetch(`${API_BASE}/api/upload/image`, {
+    const response = await fetch(`${API_BASE}/upload/image`, {
       method: 'POST',
       body: formData,
     })
