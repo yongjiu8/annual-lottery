@@ -15,7 +15,7 @@ let useServerStorage = false
 // 检查并设置服务器可用性
 export async function initServerStorage(): Promise<boolean> {
   useServerStorage = await api.checkServerAvailable()
-  console.log(`[Theme] Server storage: ${useServerStorage ? 'enabled' : 'disabled (using localStorage)'}`)
+  console.log(`[Theme] Server storage: ${useServerStorage ? 'enabled' : 'disabled'}`)
   return useServerStorage
 }
 
@@ -92,7 +92,7 @@ export const useThemeStore = defineStore('theme', {
         }
       }
       
-      this.themes.push(newTheme)
+      this.themes.unshift(newTheme)
       return newTheme
     },
     // 选择主题
@@ -136,17 +136,9 @@ export const useThemeStore = defineStore('theme', {
       }
       return { success: false, error: 'Theme not found' }
     },
-    // 清空主题数据
-    clearThemeData(themeId: string) {
-      // 清除 localStorage 中该主题的数据（作为备份）
-      const keysToRemove = [
-        `personConfig_${themeId}`,
-        `prizeConfig_${themeId}`,
-        `globalConfig_${themeId}`,
-      ]
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key)
-      })
+    // 清空主题数据（服务器端已删除，无需清理 localStorage）
+    clearThemeData(_themeId: string) {
+      // 数据已在服务器端删除，无需额外操作
     },
     
     // 检查主题是否存在（支持服务器查询）
@@ -160,8 +152,8 @@ export const useThemeStore = defineStore('theme', {
       if (useServerStorage) {
         const theme = await api.fetchTheme(themeId)
         if (theme) {
-          // 添加到本地缓存
-          this.themes.push({
+          // 添加到本地缓存（保持时间倒序）
+          this.themes.unshift({
             id: theme.id,
             name: theme.name,
             description: theme.description,
@@ -183,14 +175,5 @@ export const useThemeStore = defineStore('theme', {
       this.themes = []
       this.currentThemeId = ''
     },
-  },
-  persist: {
-    enabled: true,
-    strategies: [
-      {
-        storage: localStorage,
-        key: 'themeStore',
-      },
-    ],
   },
 })

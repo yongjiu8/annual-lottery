@@ -92,7 +92,7 @@ function resetPattern() {
 }
 
 function resetData() {
-  globalConfig.reset()
+  globalConfig.reset('')
   personConfig.reset()
   prizeConfig.resetDefault()
   // 刷新页面

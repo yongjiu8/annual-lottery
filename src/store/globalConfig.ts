@@ -6,13 +6,6 @@ import { defaultImageList, defaultMusicList, defaultPatternList } from './data'
 import { useThemeStore, isServerStorageEnabled } from './theme'
 import * as api from '@/api/lottery'
 
-// 获取存储key
-function getStorageKey() {
-  const themeStore = useThemeStore()
-  const themeId = themeStore.getCurrentThemeId || 'default'
-  return `globalConfig_${themeId}`
-}
-
 function getCurrentThemeId(): string | null {
   const themeStore = useThemeStore()
   const id = themeStore.getCurrentThemeId
@@ -20,27 +13,6 @@ function getCurrentThemeId(): string | null {
     return null
   }
   return id
-}
-
-// 从localStorage加载数据
-function loadFromLocalStorage() {
-  const key = getStorageKey()
-  const data = localStorage.getItem(key)
-  if (data) {
-    try {
-      return JSON.parse(data).globalConfig
-    }
-    catch {
-      return null
-    }
-  }
-  return null
-}
-
-// 保存到localStorage
-function saveToLocalStorage(data: any) {
-  const key = getStorageKey()
-  localStorage.setItem(key, JSON.stringify({ globalConfig: data }))
 }
 
 // 保存到服务器
@@ -293,7 +265,7 @@ export const useGlobalConfig = defineStore('global', {
     // 设置
     setLanguage(language: string) {
       this.globalConfig.language = language
-      i18n.global.locale.value = language
+      i18n.global.locale.value = language as 'zhCn' | 'en'
     },
     // 设置背景图片
     setBackground(background: any) {
@@ -304,12 +276,12 @@ export const useGlobalConfig = defineStore('global', {
       this.globalConfig.isShowAvatar = isShowAvatar
     },
     // 重置所有配置
-    reset() {
+    reset(topTitle: string) {
       this.globalConfig = {
         rowCount: 17,
         isSHowPrizeList: true,
         isShowAvatar: false,
-        topTitle: i18n.global.t('data.defaultTitle'),
+        topTitle: topTitle ? topTitle : i18n.global.t('data.defaultTitle'),
         language: browserLanguage,
         theme: {
           name: 'dracula',
@@ -331,7 +303,6 @@ export const useGlobalConfig = defineStore('global', {
         item: defaultMusicList[0],
         paused: true,
       }
-      saveToLocalStorage(this.globalConfig)
       saveToServer(this.globalConfig)
     },
     // 从存储加载数据（切换主题时调用）
@@ -339,19 +310,14 @@ export const useGlobalConfig = defineStore('global', {
       // 暂停自动保存
       allowAutoSave = false
       
-      // 优先从服务器加载
-      let data = await loadFromServer()
-      
-      // 服务器没有数据则从本地加载
-      if (!data) {
-        data = loadFromLocalStorage()
-      }
+      // 从服务器加载
+      const data = await loadFromServer()
       
       if (data) {
         this.globalConfig = data
       }
       else {
-        this.reset()
+        this.reset('')
       }
       
       // 数据加载完成，允许自动保存
@@ -359,7 +325,6 @@ export const useGlobalConfig = defineStore('global', {
     },
     // 保存当前数据
     async saveToTheme() {
-      saveToLocalStorage(this.globalConfig)
       await saveToServer(this.globalConfig)
     },
   },
@@ -378,7 +343,6 @@ function debouncedSave(data: any) {
   if (!allowAutoSave) return // 数据未加载完成，不自动保存
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
-    saveToLocalStorage(data)
     saveToServer(data)
   }, 500)
 }

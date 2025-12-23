@@ -167,7 +167,7 @@ const doEnterTheme = async (theme: ITheme, isNewTheme = false) => {
     // 重置为默认数据
     personConfig.reset()
     prizeConfig.resetDefault()
-    globalConfig.reset()
+    globalConfig.reset(theme.name)
     
     // 设置主题名称为 topTitle
     globalConfig.setTopTitle(theme.name)
@@ -233,6 +233,11 @@ const handleDeleteWithPassword = async () => {
   
   showPasswordModal.value = false
   themeToDelete.value = null
+  
+  // 如果当前页没有数据了，跳转到上一页
+  if (themes.value.length === 0 && currentPage.value > 1) {
+    currentPage.value = currentPage.value - 1
+  }
 }
 
 // 格式化日期

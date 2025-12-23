@@ -42,20 +42,6 @@ async function loadThemeData() {
     themeId = themeStore.currentThemeId
   }
   
-  // 如果store中也没有，从localStorage获取
-  if (!themeId) {
-    try {
-      const stored = localStorage.getItem('themeStore')
-      if (stored) {
-        const parsed = JSON.parse(stored)
-        themeId = parsed.currentThemeId
-      }
-    }
-    catch {
-      // ignore
-    }
-  }
-  
   if (themeId && themeId !== 'undefined') {
     // 确保 store 中的 currentThemeId 已设置
     themeStore.selectTheme(themeId)

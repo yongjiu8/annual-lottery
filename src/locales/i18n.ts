@@ -18,10 +18,9 @@ export const languageList = [
   },
 ]
 export const browserLanguage = navigator.language.toLowerCase().includes('zh') ? 'zhCn' : 'en'
-const globalConfig = JSON.parse(localStorage.getItem('globalConfig') || '{}').globalConfig || {}
-// 创建i18n
+// 创建i18n（使用浏览器语言作为默认值，实际语言会在加载配置后更新）
 const i18n = createI18n({
-  locale: globalConfig.language || browserLanguage,
+  locale: browserLanguage,
   legacy: false,
   messages: {
     zhCn,

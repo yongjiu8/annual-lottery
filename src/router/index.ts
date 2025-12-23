@@ -162,6 +162,8 @@ const router = createRouter({
   routes,
 })
 
+import { useThemeStore } from '@/store/theme'
+
 // 路由守卫：检查是否已选择主题
 router.beforeEach((to, _from, next) => {
   // 入口页面不需要检查
@@ -179,31 +181,18 @@ router.beforeEach((to, _from, next) => {
   // 如果URL中有主题ID参数，设置当前主题ID（实际验证在页面加载时进行）
   const themeIdFromUrl = to.params.themeId as string
   if (themeIdFromUrl) {
-    // 设置当前主题ID到localStorage
-    const themeData = localStorage.getItem('themeStore')
-    try {
-      const parsed = themeData ? JSON.parse(themeData) : { themes: [], currentThemeId: '' }
-      parsed.currentThemeId = themeIdFromUrl
-      localStorage.setItem('themeStore', JSON.stringify(parsed))
-    } catch {
-      localStorage.setItem('themeStore', JSON.stringify({ themes: [], currentThemeId: themeIdFromUrl }))
-    }
+    // 设置当前主题ID到store
+    const themeStore = useThemeStore()
+    themeStore.selectTheme(themeIdFromUrl)
     next()
     return
   }
   
   // 检查是否已选择主题
-  const themeData = localStorage.getItem('themeStore')
-  if (themeData) {
-    try {
-      const parsed = JSON.parse(themeData)
-      if (parsed.currentThemeId) {
-        next()
-        return
-      }
-    } catch {
-      // 解析失败，跳转到入口页
-    }
+  const themeStore = useThemeStore()
+  if (themeStore.currentThemeId) {
+    next()
+    return
   }
   
   // 未选择主题，跳转到入口页

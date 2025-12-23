@@ -5,13 +5,6 @@ import { defaultCurrentPrize, defaultPrizeList } from './data'
 import { useThemeStore, isServerStorageEnabled } from './theme'
 import * as api from '@/api/lottery'
 
-// 获取存储key
-function getStorageKey() {
-  const themeStore = useThemeStore()
-  const themeId = themeStore.getCurrentThemeId || 'default'
-  return `prizeConfig_${themeId}`
-}
-
 function getCurrentThemeId(): string | null {
   const themeStore = useThemeStore()
   const id = themeStore.getCurrentThemeId
@@ -19,27 +12,6 @@ function getCurrentThemeId(): string | null {
     return null
   }
   return id
-}
-
-// 从localStorage加载数据
-function loadFromLocalStorage() {
-  const key = getStorageKey()
-  const data = localStorage.getItem(key)
-  if (data) {
-    try {
-      return JSON.parse(data).prizeConfig
-    }
-    catch {
-      return null
-    }
-  }
-  return null
-}
-
-// 保存到localStorage
-function saveToLocalStorage(data: any) {
-  const key = getStorageKey()
-  localStorage.setItem(key, JSON.stringify({ prizeConfig: data }))
 }
 
 // 保存到服务器
@@ -229,7 +201,6 @@ export const usePrizeConfig = defineStore('prize', {
           frequency: 1,
         } as IPrizeConfig,
       }
-      saveToLocalStorage(this.prizeConfig)
       saveToServer(this.prizeConfig)
     },
     // 从存储加载数据（切换主题时调用）
@@ -237,13 +208,8 @@ export const usePrizeConfig = defineStore('prize', {
       // 暂停自动保存
       allowAutoSave = false
       
-      // 优先从服务器加载
-      let data = await loadFromServer()
-      
-      // 服务器没有数据则从本地加载
-      if (!data) {
-        data = loadFromLocalStorage()
-      }
+      // 从服务器加载
+      const data = await loadFromServer()
       
       if (data) {
         this.prizeConfig = data
@@ -257,7 +223,6 @@ export const usePrizeConfig = defineStore('prize', {
     },
     // 保存当前数据
     async saveToTheme() {
-      saveToLocalStorage(this.prizeConfig)
       await saveToServer(this.prizeConfig)
     },
   },
@@ -276,7 +241,6 @@ function debouncedSave(data: any) {
   if (!allowAutoSave) return // 数据未加载完成，不自动保存
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
-    saveToLocalStorage(data)
     saveToServer(data)
   }, 500)
 }
