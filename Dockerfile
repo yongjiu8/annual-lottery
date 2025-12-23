@@ -49,7 +49,13 @@ RUN echo 'server { \n\
         proxy_set_header Host $host; \n\
         proxy_set_header Cookie $http_cookie; \n\
         proxy_set_header X-Forwarded-Proto $scheme; \n\
+        client_max_body_size 50m; \n\
     } \n\
+    location /api/uploads/ { \n\
+		alias /usr/src/server/uploads/; \n\
+        autoindex off; \n\
+        try_files $uri =404; \n\
+	} \n\
 }' > /etc/nginx/sites-available/default
 
 # 配置 supervisor 同时运行 nginx 和 node

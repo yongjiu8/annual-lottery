@@ -32,7 +32,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true)
@@ -46,7 +46,7 @@ app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 
 // 静态文件服务 - 提供上传的图片访问
-app.use('/uploads', express.static(uploadDir))
+app.use('/api/uploads', express.static(uploadDir))
 
 // ==================== 主题 API ====================
 

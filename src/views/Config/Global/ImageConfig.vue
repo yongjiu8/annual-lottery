@@ -67,7 +67,7 @@ async function removeImage(item: IImage) {
   try {
     // 如果是服务器上的图片，调用删除 API
     if (item.url && item.url.includes('/uploads/')) {
-      await fetch(`${API_BASE}/api/upload/image/${item.id}`, {
+      await fetch(`${API_BASE}/upload/image/${item.id}`, {
         method: 'DELETE',
       })
     }
