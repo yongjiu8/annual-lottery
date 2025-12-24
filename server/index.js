@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import crypto from 'crypto'
 import db from './db.js'
 import multer from 'multer'
 import path from 'path'
@@ -11,6 +12,20 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = 3456
+
+// Token 过期时间（24小时）
+const TOKEN_EXPIRE_HOURS = 24
+
+// 生成随机 token
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex')
+}
+
+// 清理过期的 token
+function cleanExpiredTokens() {
+  const now = new Date().toISOString()
+  db.prepare('DELETE FROM access_tokens WHERE expires_at < ?').run(now)
+}
 
 // 确保上传目录存在
 const uploadDir = path.join(__dirname, 'uploads')
@@ -73,18 +88,63 @@ app.get('/api/themes/:id', (req, res) => {
   }
 })
 
-// 验证主题密码
+// 验证主题密码（成功后返回访问令牌）
 app.post('/api/themes/:id/verify-password', (req, res) => {
   try {
     const { password } = req.body
-    const theme = db.prepare('SELECT password FROM themes WHERE id = ?').get(req.params.id)
+    const themeId = req.params.id
+    const theme = db.prepare('SELECT password FROM themes WHERE id = ?').get(themeId)
     
     if (!theme) {
       return res.status(404).json({ success: false, error: 'Theme not found' })
     }
     
     const isValid = theme.password === password
-    res.json({ success: true, valid: isValid })
+    
+    if (isValid) {
+      // 清理过期 token
+      cleanExpiredTokens()
+      
+      // 生成新 token
+      const token = generateToken()
+      const now = new Date()
+      const expiresAt = new Date(now.getTime() + TOKEN_EXPIRE_HOURS * 60 * 60 * 1000)
+      
+      // 保存 token 到数据库
+      db.prepare(`
+        INSERT INTO access_tokens (theme_id, token, expires_at, created_at)
+        VALUES (?, ?, ?, ?)
+      `).run(themeId, token, expiresAt.toISOString(), now.toISOString())
+      
+      res.json({ success: true, valid: true, token, expiresAt: expiresAt.toISOString() })
+    } else {
+      res.json({ success: true, valid: false })
+    }
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message })
+  }
+})
+
+// 验证访问令牌
+app.post('/api/themes/:id/verify-token', (req, res) => {
+  try {
+    const { token } = req.body
+    const themeId = req.params.id
+    
+    if (!token) {
+      return res.json({ success: true, valid: false })
+    }
+    
+    // 清理过期 token
+    cleanExpiredTokens()
+    
+    // 查找 token
+    const record = db.prepare(`
+      SELECT * FROM access_tokens 
+      WHERE theme_id = ? AND token = ? AND expires_at > ?
+    `).get(themeId, token, new Date().toISOString())
+    
+    res.json({ success: true, valid: !!record })
   } catch (error) {
     res.status(500).json({ success: false, error: error.message })
   }

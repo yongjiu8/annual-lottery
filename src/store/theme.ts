@@ -12,6 +12,15 @@ export interface ITheme {
 // 是否使用服务器存储
 let useServerStorage = false
 
+// 存储key前缀
+const TOKEN_STORAGE_KEY = 'theme_token_'
+
+// 检查是否是移动端
+export function isMobileDevice(): boolean {
+  const ua = navigator.userAgent
+  return ua.includes('Android') || ua.includes('Adr') || /\(i[^;]+;( U;)? CPU.+Mac OS X/.test(ua)
+}
+
 // 检查并设置服务器可用性
 export async function initServerStorage(): Promise<boolean> {
   useServerStorage = await api.checkServerAvailable()
@@ -21,6 +30,88 @@ export async function initServerStorage(): Promise<boolean> {
 
 export function isServerStorageEnabled(): boolean {
   return useServerStorage
+}
+
+// 获取本地存储的 token
+function getStoredToken(themeId: string): { token: string, expiresAt: string } | null {
+  try {
+    const stored = sessionStorage.getItem(TOKEN_STORAGE_KEY + themeId)
+    if (!stored) return null
+    return JSON.parse(stored)
+  }
+  catch {
+    return null
+  }
+}
+
+// 保存 token 到本地
+function saveToken(themeId: string, token: string, expiresAt: string): void {
+  sessionStorage.setItem(TOKEN_STORAGE_KEY + themeId, JSON.stringify({ token, expiresAt }))
+}
+
+// 清除本地 token
+function clearToken(themeId: string): void {
+  sessionStorage.removeItem(TOKEN_STORAGE_KEY + themeId)
+}
+
+// 检查主题是否已验证（通过服务端验证 token）
+export async function isThemeVerified(themeId: string): Promise<boolean> {
+  // 移动端不需要验证
+  if (isMobileDevice()) {
+    return true
+  }
+
+  // 获取本地存储的 token
+  const stored = getStoredToken(themeId)
+  if (!stored || !stored.token) {
+    return false
+  }
+
+  // 先检查本地过期时间（减少不必要的服务端请求）
+  if (new Date(stored.expiresAt).getTime() < Date.now()) {
+    clearToken(themeId)
+    return false
+  }
+
+  // 向服务端验证 token
+  const isValid = await api.verifyAccessToken(themeId, stored.token)
+  if (!isValid) {
+    clearToken(themeId)
+    return false
+  }
+
+  return true
+}
+
+// 同步检查（用于路由守卫，只检查本地状态）
+export function isThemeVerifiedSync(themeId: string): boolean {
+  // 移动端不需要验证
+  if (isMobileDevice()) {
+    return true
+  }
+
+  const stored = getStoredToken(themeId)
+  if (!stored || !stored.token) {
+    return false
+  }
+
+  // 检查本地过期时间
+  if (new Date(stored.expiresAt).getTime() < Date.now()) {
+    clearToken(themeId)
+    return false
+  }
+
+  return true
+}
+
+// 标记主题为已验证（保存服务端返回的 token）
+export function markThemeVerified(themeId: string, token: string, expiresAt: string): void {
+  saveToken(themeId, token, expiresAt)
+}
+
+// 清除主题验证状态
+export function clearThemeVerified(themeId: string): void {
+  clearToken(themeId)
 }
 
 export const useThemeStore = defineStore('theme', {

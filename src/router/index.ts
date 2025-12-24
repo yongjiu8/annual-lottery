@@ -162,9 +162,9 @@ const router = createRouter({
   routes,
 })
 
-import { useThemeStore } from '@/store/theme'
+import { useThemeStore, isThemeVerifiedSync } from '@/store/theme'
 
-// 路由守卫：检查是否已选择主题
+// 路由守卫：检查是否已选择主题和权限验证
 router.beforeEach((to, _from, next) => {
   // 入口页面不需要检查
   if (to.name === 'Entry') {
@@ -178,10 +178,17 @@ router.beforeEach((to, _from, next) => {
     return
   }
   
-  // 如果URL中有主题ID参数，设置当前主题ID（实际验证在页面加载时进行）
+  // 如果URL中有主题ID参数
   const themeIdFromUrl = to.params.themeId as string
   if (themeIdFromUrl) {
-    // 设置当前主题ID到store
+    // 检查该主题是否已通过密码验证（同步检查本地 token）
+    if (!isThemeVerifiedSync(themeIdFromUrl)) {
+      // 未验证，跳转到入口页面进行密码验证
+      next({ name: 'Entry', query: { redirect: to.fullPath, themeId: themeIdFromUrl } })
+      return
+    }
+    
+    // 已验证，设置当前主题ID
     const themeStore = useThemeStore()
     themeStore.selectTheme(themeIdFromUrl)
     next()
@@ -191,6 +198,11 @@ router.beforeEach((to, _from, next) => {
   // 检查是否已选择主题
   const themeStore = useThemeStore()
   if (themeStore.currentThemeId) {
+    // 检查当前主题是否已验证
+    if (!isThemeVerifiedSync(themeStore.currentThemeId)) {
+      next({ name: 'Entry', query: { themeId: themeStore.currentThemeId } })
+      return
+    }
     next()
     return
   }

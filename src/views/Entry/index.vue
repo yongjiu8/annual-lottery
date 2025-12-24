@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { useThemeStore, type ITheme } from '@/store/theme'
+import { useThemeStore, type ITheme, markThemeVerified } from '@/store/theme'
 import { useGlobalConfig } from '@/store/globalConfig'
 import { usePersonConfig } from '@/store/personConfig'
 import { usePrizeConfig } from '@/store/prizeConfig'
@@ -12,6 +12,7 @@ import confetti from 'canvas-confetti'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const toast = useToast()
 const themeStore = useThemeStore()
 const globalConfig = useGlobalConfig()
@@ -27,11 +28,17 @@ const themeToEnter = ref<ITheme | null>(null)
 const deletePassword = ref('')
 const enterPassword = ref('')
 const isAnimating = ref(false)
+const enterPasswordError = ref('')
+const deletePasswordError = ref('')
 
 // 搜索和分页
 const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(6)
+
+// 重定向相关
+const redirectPath = ref('')
+const redirectThemeId = ref('')
 
 // 表单数据
 const formData = ref({
@@ -129,13 +136,14 @@ const handleCreate = async () => {
   })
 
   closeCreateModal()
-  doEnterTheme(newTheme, true) // 标记为新主题
+  doEnterTheme(newTheme, true, formData.value.password.trim()) // 标记为新主题，传递密码
 }
 
 // 点击进入主题（需要验证密码）
 const enterTheme = async (theme: ITheme) => {
   themeToEnter.value = theme
   enterPassword.value = ''
+  enterPasswordError.value = ''
   showEnterPasswordModal.value = true
 }
 
@@ -143,23 +151,47 @@ const enterTheme = async (theme: ITheme) => {
 const handleEnterWithPassword = async () => {
   if (!themeToEnter.value) return
   
-  const isValid = await verifyThemePassword(themeToEnter.value.id, enterPassword.value)
-  if (!isValid) {
-    toast.open({
-      message: t('entry.wrongPassword'),
-      type: 'error',
-      position: 'top-right',
-    })
+  enterPasswordError.value = ''
+  const result = await verifyThemePassword(themeToEnter.value.id, enterPassword.value)
+  if (!result.valid) {
+    enterPasswordError.value = t('entry.wrongPassword')
     return
   }
   
+  // 标记主题为已验证（保存服务端返回的 token）
+  if (result.token && result.expiresAt) {
+    markThemeVerified(themeToEnter.value.id, result.token, result.expiresAt)
+  }
+  
   showEnterPasswordModal.value = false
+  
+  // 如果有重定向路径，直接跳转
+  if (redirectPath.value && themeToEnter.value.id === redirectThemeId.value) {
+    themeStore.selectTheme(themeToEnter.value.id)
+    await personConfig.loadFromTheme()
+    await prizeConfig.loadFromTheme()
+    await globalConfig.loadFromTheme()
+    router.push(redirectPath.value)
+    redirectPath.value = ''
+    redirectThemeId.value = ''
+    return
+  }
+  
   doEnterTheme(themeToEnter.value, false)
 }
 
 // 实际进入主题
-const doEnterTheme = async (theme: ITheme, isNewTheme = false) => {
+const doEnterTheme = async (theme: ITheme, isNewTheme = false, password?: string) => {
   isAnimating.value = true
+  
+  // 新创建的主题需要验证密码获取 token
+  if (isNewTheme && password) {
+    const result = await verifyThemePassword(theme.id, password)
+    if (result.valid && result.token && result.expiresAt) {
+      markThemeVerified(theme.id, result.token, result.expiresAt)
+    }
+  }
+  
   themeStore.selectTheme(theme.id)
   
   // 如果是新创建的主题，先初始化数据并设置主题名称为 topTitle
@@ -207,6 +239,7 @@ const confirmDelete = (theme: ITheme, event: Event) => {
 const handleDelete = () => {
   showDeleteConfirm.value = false
   deletePassword.value = ''
+  deletePasswordError.value = ''
   showPasswordModal.value = true
 }
 
@@ -214,14 +247,11 @@ const handleDelete = () => {
 const handleDeleteWithPassword = async () => {
   if (!themeToDelete.value) return
   
+  deletePasswordError.value = ''
   const result = await themeStore.deleteTheme(themeToDelete.value.id, deletePassword.value)
   
   if (!result.success) {
-    toast.open({
-      message: t('entry.wrongPassword'),
-      type: 'error',
-      position: 'top-right',
-    })
+    deletePasswordError.value = t('entry.wrongPassword')
     return
   }
   
@@ -246,10 +276,45 @@ const formatDate = (dateStr: string) => {
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString().slice(0, 5)
 }
 
-onMounted(() => {
+onMounted(async () => {
   // 允许页面滚动
   document.body.style.overflowY = 'auto'
   document.documentElement.style.overflowY = 'auto'
+  
+  // 检查是否有重定向参数（从路由守卫跳转过来需要验证密码）
+  const queryRedirect = route.query.redirect as string
+  const queryThemeId = route.query.themeId as string
+  
+  if (queryThemeId) {
+    redirectPath.value = queryRedirect || `/t/${queryThemeId}`
+    redirectThemeId.value = queryThemeId
+    
+    // 等待主题列表加载完成
+    await themeStore.loadThemesFromServer()
+    
+    // 查找主题并弹出密码验证框
+    let theme = themeStore.themes.find(t => t.id === queryThemeId)
+    
+    // 如果本地没有，尝试从服务器获取
+    if (!theme) {
+      const exists = await themeStore.checkThemeExists(queryThemeId)
+      if (exists) {
+        theme = themeStore.themes.find(t => t.id === queryThemeId)
+      }
+    }
+    
+    if (theme) {
+      themeToEnter.value = theme
+      enterPassword.value = ''
+      showEnterPasswordModal.value = true
+    } else {
+      toast.open({
+        message: t('entry.themeNotFound'),
+        type: 'error',
+        position: 'top-right',
+      })
+    }
+  }
 })
 
 // 离开页面时恢复
@@ -493,8 +558,11 @@ onUnmounted(() => {
                   type="password"
                   :placeholder="t('entry.passwordPlaceholder')"
                   class="form-input"
+                  :class="{ 'input-error': deletePasswordError }"
                   @keyup.enter="handleDeleteWithPassword"
+                  @input="deletePasswordError = ''"
                 />
+                <p v-if="deletePasswordError" class="error-text">{{ deletePasswordError }}</p>
               </div>
             </div>
             <div class="modal-footer">
@@ -527,8 +595,11 @@ onUnmounted(() => {
                   type="password"
                   :placeholder="t('entry.passwordPlaceholder')"
                   class="form-input"
+                  :class="{ 'input-error': enterPasswordError }"
                   @keyup.enter="handleEnterWithPassword"
+                  @input="enterPasswordError = ''"
                 />
+                <p v-if="enterPasswordError" class="error-text">{{ enterPasswordError }}</p>
               </div>
             </div>
             <div class="modal-footer">
@@ -1154,6 +1225,25 @@ onUnmounted(() => {
   color: #ff6b6b;
   font-size: 14px;
   margin: 0;
+}
+
+// 错误提示样式
+.error-text {
+  color: #ff6b6b;
+  font-size: 13px;
+  margin: 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  
+  &::before {
+    content: '⚠';
+  }
+}
+
+.input-error {
+  border-color: #ff6b6b !important;
+  background: rgba(255, 107, 107, 0.1) !important;
 }
 
 // Modal transitions

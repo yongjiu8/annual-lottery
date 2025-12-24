@@ -56,6 +56,16 @@ db.exec(`
     UNIQUE(theme_id, fingerprint),
     FOREIGN KEY (theme_id) REFERENCES themes(id) ON DELETE CASCADE
   );
+
+  -- 访问令牌表（用于验证主题访问权限）
+  CREATE TABLE IF NOT EXISTS access_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    theme_id TEXT NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (theme_id) REFERENCES themes(id) ON DELETE CASCADE
+  );
 `)
 
 // 数据库迁移：为已存在的表添加新列

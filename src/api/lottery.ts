@@ -38,10 +38,25 @@ export async function createTheme(data: { id: string, name: string, description?
   return res.data.data
 }
 
-// 验证主题密码
-export async function verifyThemePassword(themeId: string, password: string): Promise<boolean> {
+// 验证主题密码（成功后返回 token）
+export async function verifyThemePassword(themeId: string, password: string): Promise<{ valid: boolean, token?: string, expiresAt?: string }> {
   try {
     const res = await api.post(`/themes/${themeId}/verify-password`, { password })
+    return {
+      valid: res.data.valid === true,
+      token: res.data.token,
+      expiresAt: res.data.expiresAt,
+    }
+  }
+  catch {
+    return { valid: false }
+  }
+}
+
+// 验证访问令牌
+export async function verifyAccessToken(themeId: string, token: string): Promise<boolean> {
+  try {
+    const res = await api.post(`/themes/${themeId}/verify-token`, { token })
     return res.data.valid === true
   }
   catch {

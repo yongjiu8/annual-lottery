@@ -216,5 +216,6 @@ export default {
     searchResults: '搜索结果',
     prevPage: '上一页',
     nextPage: '下一页',
+    themeNotFound: '主题不存在或已被删除',
   },
 }

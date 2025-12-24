@@ -216,5 +216,6 @@ export default {
     searchResults: 'Search results',
     prevPage: 'Prev',
     nextPage: 'Next',
+    themeNotFound: 'Theme not found or has been deleted',
   },
 }
