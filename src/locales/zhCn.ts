@@ -90,7 +90,7 @@ export default {
     dialogDelAllPerson: '该操作会删除所有人员数据，是否继续？',
     dialogResetWinner: '该操作会清空人员中奖信息，是否继续？',
     dialogResetAllData: '该操作会重置所有数据，是否继续？',
-    dialogSingleDrawLimit: '单次抽取只能抽取10位',
+    dialogSingleDrawLimit: '点击数字设置分批抽取',
     dialogLatestBrowser: '请使用最新版Chrome或者Edge浏览器',
     tipResetPrize: '进行操作可能会重置数据，请谨慎操作',
   },
@@ -150,6 +150,12 @@ export default {
   footer: {
     'self-reflection': '行有不得，反求诸己',
     'thiefEasy': '破山中贼易，破心中贼难',
+  },
+  lottery: {
+    showingPage: '第',
+    page: '页',
+    total: '共',
+    winners: '人中奖',
   },
   joinLottery: {
     joinButton: '加入抽奖',

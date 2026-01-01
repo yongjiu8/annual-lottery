@@ -12,6 +12,13 @@ import { storeToRefs } from 'pinia'
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+const props = defineProps({
+  textSize: {
+    type: Number,
+    default: 30,
+  },
+})
+
 const { t } = useI18n()
 const prizeConfig = useStore().prizeConfig
 const globalConfig = useStore().globalConfig
@@ -24,6 +31,23 @@ const prizeListContainerRef = ref()
 
 const temporaryPrizeRef = ref()
 const selectedPrize = ref<IPrizeConfig | null>()
+
+// 奖品预览弹窗
+const showPrizePreview = ref(false)
+const previewPrize = ref<IPrizeConfig | null>(null)
+
+// 显示奖品预览
+function showPrizeDetail(item: IPrizeConfig) {
+  previewPrize.value = item
+  showPrizePreview.value = true
+}
+
+// 关闭奖品预览
+function closePrizePreview() {
+  showPrizePreview.value = false
+  previewPrize.value = null
+}
+
 // 获取prizeListRef高度
 function getPrizeListHeight() {
   let height = 200
@@ -210,12 +234,12 @@ onMounted(() => {
           </figure>
           <div class="items-center p-0 text-center card-body">
             <div class="tooltip tooltip-left" :data-tip="temporaryPrize.name">
-              <h2 class="p-0 m-0 overflow-hidden w-28 card-title whitespace-nowrap text-ellipsis">
+              <h2 class="p-0 m-0 overflow-hidden w-28 card-title whitespace-nowrap text-ellipsis" :style="{ fontSize: `${props.textSize * 0.5}px` }">
                 {{
                   temporaryPrize.name }}
               </h2>
             </div>
-            <p class="absolute z-40 p-0 m-0 text-gray-300/80 mt-9">
+            <p class="absolute z-40 p-0 m-0 text-gray-300/80 mt-9" :style="{ fontSize: `${props.textSize * 0.4}px` }">
               {{ temporaryPrize.isUsedCount }}/{{
                 temporaryPrize.count }}
             </p>
@@ -254,7 +278,7 @@ onMounted(() => {
                   v-if="item.isUsed"
                   class="absolute z-50 w-full h-full bg-gray-800/70 item-mask rounded-xl"
                 />
-                <figure class="w-10 h-10 rounded-xl">
+                <figure class="w-10 h-10 cursor-pointer rounded-xl" @click="showPrizeDetail(item)">
                   <ImageSync v-if="item.picture.url" :img-item="item.picture" />
                   <img
                     v-else :src="defaultPrizeImage" alt="Prize"
@@ -265,11 +289,12 @@ onMounted(() => {
                   <div class="tooltip tooltip-left" :data-tip="item.name">
                     <h2
                       class="w-24 p-0 m-0 overflow-hidden text-center card-title whitespace-nowrap text-ellipsis"
+                      :style="{ fontSize: `${props.textSize * 0.5}px` }"
                     >
                       {{ item.name }}
                     </h2>
                   </div>
-                  <p class="absolute z-40 p-0 m-0 text-gray-300/80 mt-9">
+                  <p class="absolute z-40 p-0 m-0 text-gray-300/80 mt-9" :style="{ fontSize: `${props.textSize * 0.4}px` }">
                     {{ item.isUsedCount }}/{{
                       item.count }}
                   </p>
@@ -314,12 +339,155 @@ onMounted(() => {
         </div>
       </div>
     </transition>
+    
+    <!-- 奖品预览弹窗 -->
+    <Teleport to="body">
+      <Transition name="prize-preview">
+        <div v-if="showPrizePreview" class="prize-preview-overlay" @click="closePrizePreview">
+          <div class="prize-preview-container" @click.stop>
+            <button class="preview-close-btn" @click="closePrizePreview">✕</button>
+            <div class="preview-image-wrapper">
+              <img 
+                :src="previewPrize?.picture?.url || defaultPrizeImage" 
+                :alt="previewPrize?.name"
+                class="preview-image"
+              />
+            </div>
+            <div class="preview-info">
+              <h2 class="preview-title" :style="{ fontSize: `${props.textSize * 0.8}px` }">
+                {{ previewPrize?.name }}
+              </h2>
+              <div class="preview-progress">
+                <span class="preview-count" :style="{ fontSize: `${props.textSize * 0.5}px` }">
+                  {{ previewPrize?.isUsedCount }} / {{ previewPrize?.count }}
+                </span>
+                <progress 
+                  class="progress progress-primary w-full h-4" 
+                  :value="previewPrize?.isUsedCount" 
+                  :max="previewPrize?.count"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <style lang='scss' scoped>
 .label {
     width: 120px;
+}
+
+// 奖品预览弹窗样式
+.prize-preview-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.prize-preview-container {
+  position: relative;
+  background: linear-gradient(145deg, rgba(30, 30, 63, 0.95), rgba(42, 42, 90, 0.95));
+  border-radius: 24px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.preview-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s;
+  z-index: 10;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+  }
+}
+
+.preview-image-wrapper {
+  margin-bottom: 24px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.preview-image {
+  width: 300px;
+  height: 300px;
+  object-fit: cover;
+  display: block;
+}
+
+.preview-info {
+  color: white;
+}
+
+.preview-title {
+  margin: 0 0 16px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #667eea, #764ba2, #f093fb);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.preview-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.preview-count {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+// 预览弹窗动画
+.prize-preview-enter-active,
+.prize-preview-leave-active {
+  transition: all 0.3s ease;
+}
+
+.prize-preview-enter-from,
+.prize-preview-leave-to {
+  opacity: 0;
+  
+  .prize-preview-container {
+    transform: scale(0.8);
+  }
+}
+
+.prize-preview-enter-to,
+.prize-preview-leave-from {
+  opacity: 1;
+  
+  .prize-preview-container {
+    transform: scale(1);
+  }
 }
 
 .prize-list-enter-active {

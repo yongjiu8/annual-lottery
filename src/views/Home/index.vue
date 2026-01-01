@@ -140,7 +140,11 @@ const targets: TargetType = {
 
 const luckyTargets = ref<any[]>([])
 const luckyCardList = ref<number[]>([])
-const luckyCount = ref(10)
+const luckyCardMap = ref<Map<number, number>>(new Map()) // 中奖人员ID -> 卡片索引的映射
+const luckyCount = ref(0)
+const displayPage = ref(0) // 当前显示的页码（用于超过10人时滚动）
+const maxDisplayCount = 10 // 一页最多显示10人
+const autoScrollTimer = ref<any>(null)
 const personPool = ref<IPersonConfig[]>([])
 
 const intervalTimer = ref<any>(null)
@@ -227,7 +231,7 @@ function init() {
     if(!isShowAvatar.value) avatar.style.display = 'none'
     element.appendChild(avatar);
 
-    element = useElementStyle(element, tableData.value[i], i, patternList.value, patternColor.value, cardColor.value, cardSize.value, textSize.value)
+    element = useElementStyle(element, tableData.value[i], i, patternList.value, patternColor.value, cardColor.value, cardSize.value, textSize.value, 'default', 'add', textColor.value)
     const object = new CSS3DObject(element)
     object.position.x = Math.random() * 4000 - 2000
     object.position.y = Math.random() * 4000 - 2000
@@ -331,7 +335,7 @@ function transform(targets: any[], duration: number) {
           if (luckyCardList.value.length) {
             luckyCardList.value.forEach((cardIndex: any) => {
               const item = objects.value[cardIndex]
-              useElementStyle(item.element, {} as any, i, patternList.value, patternColor.value, cardColor.value, cardSize.value, textSize.value, 'sphere')
+              useElementStyle(item.element, {} as any, i, patternList.value, patternColor.value, cardColor.value, cardSize.value, textSize.value, 'sphere', 'change', textColor.value)
             })
           }
           luckyTargets.value = []
@@ -520,8 +524,7 @@ function startLottery() {
 
     return
   }
-  luckyCount.value = 10
-  // 自定义抽奖个数
+  // 自定义抽奖个数 - 不设上限
 
   let leftover = currentPrize.value.count - currentPrize.value.isUsedCount
   const customCount = currentPrize.value.separateCount
@@ -533,7 +536,7 @@ function startLottery() {
       }
     }
   }
-  luckyCount.value = leftover < luckyCount.value ? leftover : luckyCount.value
+  luckyCount.value = leftover
   for (let i = 0; i < luckyCount.value; i++) {
     if (personPool.value.length > 0) {
       // 解决随机元素概率过于不均等问题
@@ -558,51 +561,178 @@ async function stopLottery() {
   if (!canOperate.value) {
     return
   }
-  //   clearInterval(intervalTimer.value)
-  //   intervalTimer.value = null
   canOperate.value = false
   rollBall(0, 1)
 
+  displayPage.value = 0
+  const totalPages = Math.ceil(luckyTargets.value.length / maxDisplayCount)
+  
+  // 显示第一页中奖人员
+  showLuckyPage(0, true)
+  
+  // 如果超过10人，启动自动滚动（延迟启动，等第一页动画完成）
+  if (totalPages > 1) {
+    setTimeout(() => {
+      startAutoScroll()
+    }, 2000)
+  }
+}
+
+// 启动自动滚动
+function startAutoScroll() {
+  // 清除之前的定时器
+  if (autoScrollTimer.value) {
+    clearInterval(autoScrollTimer.value)
+  }
+  const totalPages = Math.ceil(luckyTargets.value.length / maxDisplayCount)
+  autoScrollTimer.value = setInterval(() => {
+    const oldPage = displayPage.value
+    displayPage.value = (displayPage.value + 1) % totalPages
+    showLuckyPage(displayPage.value, false, oldPage)
+  }, 4000)
+}
+
+// 手动切换到上一页
+function prevPage() {
+  if (displayPage.value > 0) {
+    // 停止自动滚动
+    if (autoScrollTimer.value) {
+      clearInterval(autoScrollTimer.value)
+      autoScrollTimer.value = null
+    }
+    const oldPage = displayPage.value
+    displayPage.value--
+    showLuckyPage(displayPage.value, false, oldPage)
+    // 手动操作后重新启动自动滚动
+    setTimeout(() => startAutoScroll(), 4000)
+  }
+}
+
+// 手动切换到下一页
+function nextPage() {
+  const totalPages = Math.ceil(luckyTargets.value.length / maxDisplayCount)
+  if (displayPage.value < totalPages - 1) {
+    // 停止自动滚动
+    if (autoScrollTimer.value) {
+      clearInterval(autoScrollTimer.value)
+      autoScrollTimer.value = null
+    }
+    const oldPage = displayPage.value
+    displayPage.value++
+    showLuckyPage(displayPage.value, false, oldPage)
+    // 手动操作后重新启动自动滚动
+    setTimeout(() => startAutoScroll(), 4000)
+  }
+}
+
+// 手动跳转到指定页
+function goToPage(page: number) {
+  if (page === displayPage.value) return
+  // 停止自动滚动
+  if (autoScrollTimer.value) {
+    clearInterval(autoScrollTimer.value)
+    autoScrollTimer.value = null
+  }
+  const oldPage = displayPage.value
+  displayPage.value = page
+  showLuckyPage(page, false, oldPage)
+  // 手动操作后重新启动自动滚动
+  setTimeout(() => startAutoScroll(), 4000)
+}
+
+// 显示指定页的中奖人员 - 优化版本
+function showLuckyPage(page: number, isFirstShow = false, prevPage: number = -1) {
   const windowSize = { width: window.innerWidth, height: window.innerHeight }
-  luckyTargets.value.forEach((person: IPersonConfig, index: number) => {
-    const cardIndex = selectCard(luckyCardList.value, tableData.value.length, person.id)
-    luckyCardList.value.push(cardIndex)
-    const totalLuckyCount = luckyTargets.value.length
+  const startIndex = page * maxDisplayCount
+  const endIndex = Math.min(startIndex + maxDisplayCount, luckyTargets.value.length)
+  const pagePersons = luckyTargets.value.slice(startIndex, endIndex)
+  
+  // 清除所有正在进行的TWEEN动画
+  TWEEN.removeAll()
+  
+  // 隐藏之前显示的中奖卡片
+  if (!isFirstShow && prevPage >= 0) {
+    const prevStartIndex = prevPage * maxDisplayCount
+    const prevEndIndex = Math.min(prevStartIndex + maxDisplayCount, luckyTargets.value.length)
+    for (let i = prevStartIndex; i < prevEndIndex; i++) {
+      const person = luckyTargets.value[i]
+      const cardIndex = luckyCardMap.value.get(person.id)
+      if (cardIndex !== undefined) {
+        const item = objects.value[cardIndex]
+        if (item) {
+          item.position.z = -2000
+        }
+      }
+    }
+  }
+  
+  // 第一页且首次显示时清空映射
+  if (page === 0 && isFirstShow) {
+    luckyCardList.value = []
+    luckyCardMap.value.clear()
+    
+    // 为所有中奖人员预先分配卡片索引
+    luckyTargets.value.forEach((person: IPersonConfig) => {
+      const cardIndex = selectCard(luckyCardList.value, tableData.value.length, person.id)
+      luckyCardList.value.push(cardIndex)
+      luckyCardMap.value.set(person.id, cardIndex)
+    })
+  }
+  
+  // 显示当前页的卡片
+  pagePersons.forEach((person: IPersonConfig, index: number) => {
+    const cardIndex = luckyCardMap.value.get(person.id)!
+    const totalLuckyCount = pagePersons.length
     const item = objects.value[cardIndex]
     const { xTable, yTable } = useElementPosition(item, rowCount.value, totalLuckyCount, { width: cardSize.value.width * 2, height: cardSize.value.height * 2 }, windowSize, index)
-    new TWEEN.Tween(item.position)
-      .to({
-        x: xTable,
-        y: yTable,
-        z: 1000,
-      }, 1200)
-      .easing(TWEEN.Easing.Exponential.InOut)
-      .onStart(() => {
-        item.element = useElementStyle(item.element, person, cardIndex, patternList.value, patternColor.value, luckyColor.value, { width: cardSize.value.width * 2, height: cardSize.value.height * 2 }, textSize.value * 2, 'lucky')
-      })
-      .start()
-      .onComplete(() => {
-        canOperate.value = true
-        currentStatus.value = 3
-      })
-    new TWEEN.Tween(item.rotation)
-      .to({
-        x: 0,
-        y: 0,
-        z: 0,
-      }, 900)
-      .easing(TWEEN.Easing.Exponential.InOut)
-      .start()
-      .onComplete(() => {
-        confettiFire()
-        resetCamera()
-      })
+    
+    // 设置卡片样式
+    item.element = useElementStyle(item.element, person, cardIndex, patternList.value, patternColor.value, luckyColor.value, { width: cardSize.value.width * 2, height: cardSize.value.height * 2 }, textSize.value * 2, 'lucky', 'change', textColor.value)
+    
+    if (isFirstShow) {
+      // 第一次显示用动画
+      new TWEEN.Tween(item.position)
+        .to({ x: xTable, y: yTable, z: 1000 }, 800)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .start()
+        .onComplete(() => {
+          canOperate.value = true
+          currentStatus.value = 3
+        })
+      new TWEEN.Tween(item.rotation)
+        .to({ x: 0, y: 0, z: 0 }, 600)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .start()
+        .onComplete(() => {
+          if (index === 0) {
+            confettiFire()
+          }
+          resetCamera()
+        })
+    } else {
+      // 切换页面时直接设置位置，不用动画
+      item.position.x = xTable
+      item.position.y = yTable
+      item.position.z = 1000
+      item.rotation.x = 0
+      item.rotation.y = 0
+      item.rotation.z = 0
+    }
   })
+  
+  // 手动渲染一次
+  render()
 }
 // 继续
 async function continueLottery() {
   if (!canOperate.value) {
     return
+  }
+  
+  // 清理自动滚动定时器
+  if (autoScrollTimer.value) {
+    clearInterval(autoScrollTimer.value)
+    autoScrollTimer.value = null
   }
 
   const customCount = currentPrize.value.separateCount
@@ -625,6 +755,11 @@ async function continueLottery() {
   await enterLottery()
 }
 function quitLottery() {
+  // 清理自动滚动定时器
+  if (autoScrollTimer.value) {
+    clearInterval(autoScrollTimer.value)
+    autoScrollTimer.value = null
+  }
   enterLottery()
   currentStatus.value = 0
 }
@@ -712,7 +847,7 @@ function randomBallData(mod: 'default' | 'lucky' | 'sphere' = 'default') {
       if (!objects.value[cardRandomIndexArr[i]]) {
         continue
       }
-      objects.value[cardRandomIndexArr[i]].element = useElementStyle(objects.value[cardRandomIndexArr[i]].element, allPersonList.value[personRandomIndexArr[i]], cardRandomIndexArr[i], patternList.value, patternColor.value, cardColor.value, { width: cardSize.value.width, height: cardSize.value.height }, textSize.value, mod, 'change')
+      objects.value[cardRandomIndexArr[i]].element = useElementStyle(objects.value[cardRandomIndexArr[i]].element, allPersonList.value[personRandomIndexArr[i]], cardRandomIndexArr[i], patternList.value, patternColor.value, cardColor.value, { width: cardSize.value.width, height: cardSize.value.height }, textSize.value, mod, 'change', textColor.value)
     }
   }, 200)
 }
@@ -763,6 +898,13 @@ function cleanup() {
 //   animationRunning.value = false
   clearInterval(intervalTimer.value)
   intervalTimer.value = null
+  
+  // 清理自动滚动定时器
+  if (autoScrollTimer.value) {
+    clearInterval(autoScrollTimer.value)
+    autoScrollTimer.value = null
+  }
+  
   if (scene.value) {
     scene.value.traverse((object: Object3D) => {
       if ((object as any).material) {
@@ -951,13 +1093,13 @@ onUnmounted(() => {
     
     <!-- 空数据提示 -->
     <div v-if="tableData.length <= 0" class="empty-actions">
-      <button class="action-btn primary" @click="router.push('/config')">
+      <button class="action-btn primary" :style="{ fontSize: `${textSize * 0.5}px` }" @click="router.push('/config')">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
         </svg>
         {{ t('button.noInfoAndImport') }}
       </button>
-      <button class="action-btn secondary" @click="setDefaultPersonList">
+      <button class="action-btn secondary" :style="{ fontSize: `${textSize * 0.5}px` }" @click="setDefaultPersonList">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
@@ -971,7 +1113,7 @@ onUnmounted(() => {
     <!-- 底部操作菜单 -->
     <div id="menu" class="menu-container">
       <!-- 状态 0: 进入抽奖 -->
-      <button v-if="currentStatus === 0 && tableData.length > 0" class="lottery-btn enter-btn" @click="enterLottery">
+      <button v-if="currentStatus === 0 && tableData.length > 0" class="lottery-btn enter-btn" :style="{ fontSize: `${textSize * 0.6}px` }" @click="enterLottery">
         <span class="btn-icon">🎰</span>
         <span class="btn-text">{{ t('button.enterLottery') }}</span>
         <span class="btn-glow"></span>
@@ -979,43 +1121,79 @@ onUnmounted(() => {
 
       <!-- 状态 1: 开始抽奖 -->
       <div v-if="currentStatus === 1" class="start">
-        <button class="lottery-btn start-btn" @click="startLottery">
+        <button class="lottery-btn start-btn" :style="{ fontSize: `${textSize * 0.6}px` }" @click="startLottery">
           <span class="btn-icon">🎲</span>
           <span class="btn-text">{{ t('button.start') }}</span>
           <span class="btn-particles"></span>
         </button>
-        <p class="status-hint">{{ t('button.start') }} - Space</p>
+        <p class="status-hint" :style="{ fontSize: `${textSize * 0.45}px` }">{{ t('button.start') }} - Space</p>
       </div>
 
       <!-- 状态 2: 抽取幸运儿 -->
       <div v-if="currentStatus === 2" class="rolling-state">
-        <button class="lottery-btn stop-btn" @click="stopLottery">
+        <button class="lottery-btn stop-btn" :style="{ fontSize: `${textSize * 0.6}px` }" @click="stopLottery">
           <span class="btn-icon spinning">🎯</span>
           <span class="btn-text">{{ t('button.selectLucky') }}</span>
         </button>
-        <p class="status-hint rolling">Rolling...</p>
+        <p class="status-hint rolling" :style="{ fontSize: `${textSize * 0.45}px` }">Rolling...</p>
       </div>
 
       <!-- 状态 3: 继续/取消 -->
-      <div v-if="currentStatus === 3" class="result-actions">
-        <button class="lottery-btn continue-btn" @click="continueLottery">
-          <span class="btn-icon">🎉</span>
-          <span class="btn-text">{{ t('button.continue') }}</span>
-        </button>
-        <button class="lottery-btn cancel-btn" @click="quitLottery">
-          <span class="btn-icon">↩️</span>
-          <span class="btn-text">{{ t('button.cancel') }}</span>
-        </button>
+      <div v-if="currentStatus === 3" class="result-state">
+        <!-- 分页指示器 -->
+        <div v-if="luckyTargets.length > maxDisplayCount" class="page-indicator">
+          <span class="page-info" :style="{ fontSize: `${textSize * 0.45}px` }">
+            {{ t('lottery.showingPage') || '第' }} {{ displayPage + 1 }} / {{ Math.ceil(luckyTargets.length / maxDisplayCount) }} {{ t('lottery.page') || '页' }}
+            ({{ t('lottery.total') || '共' }} {{ luckyTargets.length }} {{ t('lottery.winners') || '人中奖' }})
+          </span>
+          <div class="page-controls">
+            <button 
+              class="page-btn" 
+              :style="{ fontSize: `${textSize * 0.4}px` }"
+              :disabled="displayPage === 0"
+              @click="prevPage"
+            >
+              ◀ {{ t('entry.prevPage') || '上一页' }}
+            </button>
+            <div class="page-dots">
+              <span 
+                v-for="i in Math.ceil(luckyTargets.length / maxDisplayCount)" 
+                :key="i" 
+                class="page-dot"
+                :class="{ active: displayPage === i - 1 }"
+                @click="goToPage(i - 1)"
+              ></span>
+            </div>
+            <button 
+              class="page-btn" 
+              :style="{ fontSize: `${textSize * 0.4}px` }"
+              :disabled="displayPage >= Math.ceil(luckyTargets.length / maxDisplayCount) - 1"
+              @click="nextPage"
+            >
+              {{ t('entry.nextPage') || '下一页' }} ▶
+            </button>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="lottery-btn continue-btn" :style="{ fontSize: `${textSize * 0.6}px` }" @click="continueLottery">
+            <span class="btn-icon">🎉</span>
+            <span class="btn-text">{{ t('button.continue') }}</span>
+          </button>
+          <button class="lottery-btn cancel-btn" :style="{ fontSize: `${textSize * 0.6}px` }" @click="quitLottery">
+            <span class="btn-icon">↩️</span>
+            <span class="btn-text">{{ t('button.cancel') }}</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
   <StarsBackground :home-background="homeBackground" />
-  <PrizeList class="absolute left-0 top-32" />
-  <JoinLottery />
+  <PrizeList class="absolute left-0 top-32" :text-size="textSize" />
+  <JoinLottery :text-size="textSize" />
   
   <!-- 返回主题选择按钮 -->
   <div class="back-btn-wrapper">
-    <button class="back-btn" @click="router.push('/entry')" :title="t('entry.backToThemes')">
+    <button class="back-btn" :style="{ fontSize: `${textSize * 0.45}px` }" @click="router.push('/entry')" :title="t('entry.backToThemes')">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
       </svg>
@@ -1025,7 +1203,7 @@ onUnmounted(() => {
   
   <!-- 分享按钮 -->
   <div class="share-btn-wrapper">
-    <button class="share-btn" @click="copyShareLink" :title="t('entry.shareLink')">
+    <button class="share-btn" :style="{ fontSize: `${textSize * 0.45}px` }" @click="copyShareLink" :title="t('entry.shareLink')">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
       </svg>
@@ -1038,11 +1216,11 @@ onUnmounted(() => {
     <div v-if="showQrModal" class="qr-modal-overlay" @click="closeQrModal">
       <div class="qr-modal" @click.stop>
         <button class="qr-close-btn" @click="closeQrModal">✕</button>
-        <h3 class="qr-title">{{ t('entry.scanToJoin') }}</h3>
+        <h3 class="qr-title" :style="{ fontSize: `${textSize * 0.65}px` }">{{ t('entry.scanToJoin') }}</h3>
         <div class="qr-code-wrapper">
           <img :src="qrCodeDataUrl" alt="QR Code" class="qr-code-img" />
         </div>
-        <p class="qr-hint">{{ t('entry.linkCopied') }}</p>
+        <p class="qr-hint" :style="{ fontSize: `${textSize * 0.45}px` }">{{ t('entry.linkCopied') }}</p>
       </div>
     </div>
   </Teleport>
@@ -1377,6 +1555,79 @@ onUnmounted(() => {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+// 结果状态容器
+.result-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+// 分页指示器
+.page-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.page-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.page-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.page-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+  }
+  
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.page-dots {
+  display: flex;
+  gap: 8px;
+}
+
+.page-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: rgba(255, 255, 255, 0.6);
+  }
+  
+  &.active {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    transform: scale(1.2);
+  }
 }
 
 // 结果操作按钮

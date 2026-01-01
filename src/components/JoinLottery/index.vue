@@ -6,6 +6,13 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'vue-toast-notification'
 import confetti from 'canvas-confetti'
 
+const props = defineProps({
+  textSize: {
+    type: Number,
+    default: 30,
+  },
+})
+
 const { t } = useI18n()
 const toast = useToast()
 const personConfig = useStore().personConfig
@@ -226,6 +233,7 @@ const handleJoin = async () => {
   <div class="join-lottery-wrapper">
     <button 
       class="join-btn"
+      :style="{ fontSize: `${props.textSize * 0.45}px` }"
       @click="openModal"
       :title="t('joinLottery.joinButton')"
     >
@@ -249,53 +257,56 @@ const handleJoin = async () => {
                 <div class="icon-fix"></div>
               </div>
             </div>
-            <p class="success-text">{{ t('joinLottery.welcomeMessage') }}</p>
-            <p class="success-name">{{ formData.name }}</p>
+            <p class="success-text" :style="{ fontSize: `${props.textSize * 0.5}px` }">{{ t('joinLottery.welcomeMessage') }}</p>
+            <p class="success-name" :style="{ fontSize: `${props.textSize * 0.8}px` }">{{ formData.name }}</p>
           </div>
 
           <!-- 表单内容 -->
           <div v-else class="modal-content">
             <div class="modal-header">
-              <h3>{{ t('joinLottery.title') }}</h3>
+              <h3 :style="{ fontSize: `${props.textSize * 0.65}px` }">{{ t('joinLottery.title') }}</h3>
               <button class="close-btn" @click="closeModal">&times;</button>
             </div>
             
             <div class="modal-body">
               <div class="form-group">
-                <label>{{ t('joinLottery.name') }} <span class="required">*</span></label>
+                <label :style="{ fontSize: `${props.textSize * 0.45}px` }">{{ t('joinLottery.name') }} <span class="required">*</span></label>
                 <input 
                   v-model="formData.name"
                   type="text"
                   :placeholder="t('joinLottery.namePlaceholder')"
                   class="form-input"
+                  :style="{ fontSize: `${props.textSize * 0.45}px` }"
                   maxlength="20"
                 />
               </div>
               
               <div class="form-group">
-                <label>{{ t('joinLottery.department') }}</label>
+                <label :style="{ fontSize: `${props.textSize * 0.45}px` }">{{ t('joinLottery.department') }}</label>
                 <input 
                   v-model="formData.department"
                   type="text"
                   :placeholder="t('joinLottery.departmentPlaceholder')"
                   class="form-input"
+                  :style="{ fontSize: `${props.textSize * 0.45}px` }"
                   maxlength="30"
                 />
               </div>
               
               <div class="form-group">
-                <label>{{ t('joinLottery.identity') }}</label>
+                <label :style="{ fontSize: `${props.textSize * 0.45}px` }">{{ t('joinLottery.identity') }}</label>
                 <input 
                   v-model="formData.identity"
                   type="text"
                   :placeholder="t('joinLottery.identityPlaceholder')"
                   class="form-input"
+                  :style="{ fontSize: `${props.textSize * 0.45}px` }"
                   maxlength="30"
                 />
               </div>
               
               <div class="form-group">
-                <label>{{ t('joinLottery.avatar') }}</label>
+                <label :style="{ fontSize: `${props.textSize * 0.45}px` }">{{ t('joinLottery.avatar') }}</label>
                 <div class="avatar-upload">
                   <input 
                     ref="fileInputRef"
@@ -310,7 +321,7 @@ const handleJoin = async () => {
                     @click="triggerFileInput"
                   >
                     <span class="upload-icon">📷</span>
-                    <span class="upload-text">{{ t('joinLottery.clickToUpload') }}</span>
+                    <span class="upload-text" :style="{ fontSize: `${props.textSize * 0.4}px` }">{{ t('joinLottery.clickToUpload') }}</span>
                   </div>
                   <div v-else class="avatar-preview-wrapper">
                     <img :src="avatarPreview" alt="avatar" class="avatar-preview" />
@@ -321,11 +332,12 @@ const handleJoin = async () => {
             </div>
             
             <div class="modal-footer">
-              <button class="cancel-btn" @click="closeModal">
+              <button class="cancel-btn" :style="{ fontSize: `${props.textSize * 0.45}px` }" @click="closeModal">
                 {{ t('button.cancel') }}
               </button>
               <button 
                 class="submit-btn" 
+                :style="{ fontSize: `${props.textSize * 0.45}px` }"
                 @click="handleJoin"
                 :disabled="!isFormValid || isAnimating"
               >

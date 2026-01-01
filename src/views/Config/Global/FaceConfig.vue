@@ -148,6 +148,10 @@ watch(cardSizeValue, (val: { width: number, height: number }) => {
   globalConfig.setCardSize(val)
 }, { deep: true })
 
+watch(textSizeValue, (val: number) => {
+  globalConfig.setTextSize(val)
+})
+
 watch(isShowPrizeListValue, () => {
   globalConfig.setIsShowPrizeList(isShowPrizeListValue.value)
 })

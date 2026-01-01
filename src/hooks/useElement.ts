@@ -1,7 +1,7 @@
 import type { IPersonConfig } from '@/types/storeType'
 import { rgba } from '@/utils/color'
 
-export function useElementStyle(element: any, person: IPersonConfig, index: number, patternList: number[], patternColor: string, cardColor: string, cardSize: { width: number, height: number }, textSize: number, mod: 'default' | 'lucky' | 'sphere' = 'default', type: 'add' | 'change' = 'add') {
+export function useElementStyle(element: any, person: IPersonConfig, index: number, patternList: number[], patternColor: string, cardColor: string, cardSize: { width: number, height: number }, textSize: number, mod: 'default' | 'lucky' | 'sphere' = 'default', type: 'add' | 'change' = 'add', textColor: string = '#ffffff') {
   // 设置基础尺寸
   element.style.width = `${cardSize.width}px`
   element.style.height = `${cardSize.height}px`
@@ -53,22 +53,37 @@ export function useElementStyle(element: any, person: IPersonConfig, index: numb
     })
   }
   
+  // 设置文字颜色
+  element.style.color = textColor
+  
   // 卡片ID样式
   element.children[0].style.fontSize = `${textSize * 0.5}px`
+  element.children[0].style.color = textColor
   if (person.uid) {
     element.children[0].textContent = person.uid
   }
 
   // 卡片名称样式
   element.children[1].style.fontSize = `${textSize}px`
-  element.children[1].style.lineHeight = `${textSize * 3}px`
+  element.children[1].style.lineHeight = `${textSize * 1.3}px`
+  element.children[1].style.color = textColor
   element.children[1].style.textShadow = `0 1px 4px ${rgba(cardColor, 0.6)}`
+  element.children[1].style.wordBreak = 'break-all'
+  element.children[1].style.whiteSpace = 'normal'
+  element.children[1].style.overflow = 'hidden'
+  element.children[1].style.textOverflow = 'ellipsis'
+  element.children[1].style.display = '-webkit-box'
+  element.children[1].style.webkitLineClamp = '2'
+  element.children[1].style.webkitBoxOrient = 'vertical'
+  element.children[1].style.maxHeight = `${textSize * 2.6}px`
+  element.children[1].style.padding = '0 5px'
   if (person.name) {
     element.children[1].textContent = person.name
   }
   
   // 卡片详情样式
   element.children[2].style.fontSize = `${textSize * 0.5}px`
+  element.children[2].style.color = textColor
   if (person.department || person.identity) {
     element.children[2].innerHTML = `${person.department ? person.department : ''}<br/>${person.identity ? person.identity : ''}`
   }

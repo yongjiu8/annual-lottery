@@ -90,7 +90,7 @@ export default {
     dialogDelAllPerson: 'This operation will delete all personnel list data. Do you want to continue?',
     dialogResetWinner: 'This operation will clear the winning information of personnel. Do you want to continue?',
     dialogResetAllData: 'This operation will reset all data. Do you want to continue?',
-    dialogSingleDrawLimit: 'Only 10 characters can be extracted in a single draw',
+    dialogSingleDrawLimit: 'Click numbers to set batch draw',
     dialogLatestBrowser: 'Please use the latest version of Chrome or Edge browser',
     tipResetPrize: 'Performing operations may reset data, please proceed with caution',
   },
@@ -150,6 +150,12 @@ export default {
   footer: {
     'self-reflection': 'Turn inward and examine yourself when you encounter difficulties in life.',
     'thiefEasy': 'Thief difficult mountain thief easily, breaking heart.',
+  },
+  lottery: {
+    showingPage: 'Page',
+    page: '',
+    total: 'Total',
+    winners: 'winners',
   },
   joinLottery: {
     joinButton: 'Join Lottery',
